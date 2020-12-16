@@ -62,11 +62,10 @@ function love.keypressed(key)
     if state == STATE_ACTION then
         if key == "escape" then
             love.event.quit()
-        elseif key == "left" then
-            entities.setInput("left")
-        elseif key == "right" then
-            entities.setInput("right")
+        elseif key == "space" then
+            entities.setInput("jump")
         end
+
     end
 end
 

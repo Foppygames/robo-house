@@ -21,13 +21,29 @@ function floors.draw()
     end
 end
 
-function floors.getLocation(floor,xFraction)
+-- returns x and y for entity to stand on provided floor at provided fraction of floor width
+function floors.getLocation(floor,floorXFraction)
     if floor > FLOOR_COUNT then
         return 0, 0
     end
     local y = FLOOR_Y_START - (floor-1) * FLOOR_Y_STEP
-    local x = utils.round(FLOOR_X + xFraction * FLOOR_WIDTH)
+    local x = utils.round(FLOOR_X + floorXFraction * FLOOR_WIDTH)
     return x, y
+end
+
+-- returns whether landed and new y for provided entity parameters
+function floors.land(x,w,oldY,newY)
+    local diff = math.abs(x - (FLOOR_X+FLOOR_WIDTH/2))
+    if diff > (FLOOR_WIDTH/2 + w/2) then
+        return false, newY
+    end
+    for i = 1, FLOOR_COUNT do
+        local floorY = FLOOR_Y_START-(i-1)*FLOOR_Y_STEP
+        if oldY <= floorY and newY > floorY then
+            return true, floorY
+        end
+    end
+    return false, newY 
 end
 
 return floors
