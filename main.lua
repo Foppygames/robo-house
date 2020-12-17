@@ -4,8 +4,10 @@
 local aspect = require("modules.aspect")
 local entities = require("modules.entities")
 local floors = require("modules.floors")
+local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 
+local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(0,135,81)
 local STATE_TITLE = 1
 local STATE_ACTION = 2
@@ -15,10 +17,6 @@ local state
 
 --[[ Todo:
 - LATER: title screen, next level screen, game over screen
-- player can walk (arrow keys left and right)
-- there are ladders
-- player can climb ladders (arrow keys up and down while on a ladder)
-- player can jump (space bar OR: z?)
 - robots can walk
 - robots can go bad
 - LATER: cats can walk
@@ -39,8 +37,14 @@ local state
 ]]
 
 function love.load()
-    aspect.init(false)
+    love.window.setTitle(GAME_TITLE)
+	love.graphics.setDefaultFilter("nearest","nearest",1)
+	love.graphics.setLineStyle("rough")
+    love.graphics.setFont(love.graphics.newFont("Retroville_NC.ttf",10))
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)
+
+    aspect.init(false)
+    ladders.init()
     switchToState(STATE_ACTION)
 end
 
@@ -50,7 +54,7 @@ function switchToState(new)
     end
     state = new
     if state == STATE_ACTION then
-        entities.add(entities.TYPE_PLAYER,1,0.1)
+        entities.add(entities.TYPE_PLAYER,1,0.2)
     end
 end
 
@@ -73,6 +77,7 @@ function love.draw()
     aspect.apply()
     love.graphics.clear(BACKGROUND_COLOR)
     floors.draw()
+    ladders.draw()
     entities.draw()
     aspect.letterbox()
 end

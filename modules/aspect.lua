@@ -5,10 +5,18 @@ local aspect = {}
 
 local utils = require("modules.utils")
 
---aspect.WINDOW_WIDTH = 640
---aspect.WINDOW_HEIGHT = 480
-aspect.WINDOW_WIDTH = 1065
-aspect.WINDOW_HEIGHT = 600
+-- testing
+aspect.WINDOW_WIDTH = 712
+aspect.WINDOW_HEIGHT = 400
+
+-- screenshots
+--aspect.WINDOW_WIDTH = 356
+--aspect.WINDOW_HEIGHT = 200
+
+-- final
+--aspect.WINDOW_WIDTH = 1065
+--aspect.WINDOW_HEIGHT = 600
+
 aspect.GAME_WIDTH = 356
 aspect.GAME_HEIGHT = 200
 

@@ -4,6 +4,7 @@
 local entities = {}
 
 local floors = require("modules.floors")
+local ladders = require("modules.ladders")
 
 entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
@@ -29,7 +30,9 @@ function entities.add(type,floor,floorXFraction)
             input = {
                 left = false,
                 right = false,
-                jump = false
+                jump = false,
+                up = false,
+                down = false
             },
             move = {
                 dx = 0,
@@ -44,6 +47,14 @@ function entities.add(type,floor,floorXFraction)
             },
             fall = {
                 gravity = 5
+            },
+            climb = {
+                climbing = false,
+                floor = nil,
+                maxDx = 90,
+                accX = 1000, 
+                maxDy = 90,
+                accY = 1000
             }
         }
     elseif type == entities.TYPE_ROBOT then
@@ -55,7 +66,9 @@ function entities.add(type,floor,floorXFraction)
             ai = {
                 left = false,
                 right = false,
-                jump = false
+                jump = false,
+                up = false,
+                down = false
             },
             move = {
                 dx = 0,
@@ -64,7 +77,8 @@ function entities.add(type,floor,floorXFraction)
                 appliedDy = 0,
                 maxDx = 50,
                 accX = 500,
-                landed = false
+                landed = false,
+                climbing = false
             }
         }
     end
@@ -76,16 +90,10 @@ function entities.setInput(key)
 end
 
 local function _input(entity)
-    if love.keyboard.isDown("left") then
-        entity.input.left = true
-        entity.input.right = false
-    elseif love.keyboard.isDown("right") then
-        entity.input.left = false
-        entity.input.right = true
-    else
-        entity.input.left = false
-        entity.input.right = false
-    end
+    entity.input.left = love.keyboard.isDown("left")
+    entity.input.right = love.keyboard.isDown("right")
+    entity.input.up = love.keyboard.isDown("up")
+    entity.input.down = love.keyboard.isDown("down")
     entity.input.jump = input.jump
 end
 
@@ -103,7 +111,7 @@ local function getInput(entity,key)
     return false
 end
 
-local function loseMomentum(entity,dt)
+local function loseHorMomentum(entity,dt)
     if entity.move.dx > 0 then
         entity.move.dx = entity.move.dx - entity.move.accX*dt
         if entity.move.dx < 0 then
@@ -132,7 +140,30 @@ local function move(entity,dt)
             entity.move.dx = entity.move.maxDx
         end
     else
-        loseMomentum(entity,dt)
+        -- during climbing there is no momentum
+        if entity.climb ~= nil and entity.climb.climbing then
+            entity.move.dx = 0
+        else
+            loseHorMomentum(entity,dt)
+        end
+    end
+    if entity.climb ~= nil and entity.climb.climbing then
+        local up = getInput(entity,"up")
+        local down = getInput(entity,"down")
+        if up then
+            entity.move.dy = entity.move.dy - entity.climb.accX*dt
+            if entity.move.dy < -entity.climb.maxDy then
+                entity.move.dy = -entity.climb.maxDy
+            end
+        elseif down then
+            entity.move.dy = entity.move.dy + entity.climb.accX*dt
+            if entity.move.dy > entity.climb.maxDy then
+                entity.move.dy = entity.climb.maxDy
+            end
+        else
+            -- during climbing there is no momentum
+            entity.move.dy = 0
+        end
     end
     entity.x = entity.x + entity.move.dx*dt
     entity.y = entity.y + entity.move.dy*dt
@@ -150,6 +181,9 @@ local function jump(entity)
 end
 
 local function fall(entity,dt)
+    if entity.climb ~= nil and entity.climb.climbing then
+        return
+    end
     if entity.move ~= nil then
         entity.move.dy = entity.move.dy + entity.fall.gravity
     end
@@ -159,11 +193,38 @@ local function land(entity)
     if entity.move ~= nil then
         -- entity is moving down
         if entity.move.dy > 0 then
-            local landed, y = floors.land(entity.x,entity.w,entity.move.oldY,entity.y)
+            local landed, floor, y = floors.land(entity.x,entity.w,entity.move.oldY,entity.y)
+            if landed then
+                -- entity is climbing through floor that is not the floor the ladder is standing on
+                if entity.climb ~= nil and entity.climb.climbing and entity.climb.floor ~= floor then
+                    landed = false
+                end
+            end
             entity.move.landed = landed
             if landed then
                 entity.y = y
                 entity.move.dy = 0
+            end
+        end
+    end
+end
+
+local function climb(entity)
+    -- entity is climbing
+    if entity.climb.climbing then
+        local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
+        entity.climb.climbing = grab
+        entity.climb.floor = floor
+    -- entity is not climbing
+    else
+        if getInput(entity,"up") or getInput(entity,"down") then
+            local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
+            if grab then
+                entity.move.dx = 0
+                entity.move.dy = 0
+                entity.climb.climbing = true
+                entity.climb.floor = floor
+                entity.move.landed = false
             end
         end
     end
@@ -184,6 +245,9 @@ function entities.update(dt)
         end
         if entity.fall ~= nil then
             fall(entity,dt)
+        end
+        if entity.climb ~= nil then
+            climb(entity)
         end
         if entity.move ~= nil then
             move(entity,dt)
