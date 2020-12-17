@@ -4,6 +4,7 @@
 local aspect = require("modules.aspect")
 local entities = require("modules.entities")
 local floors = require("modules.floors")
+local images = require("modules.images")
 local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 
@@ -44,6 +45,7 @@ function love.load()
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)
 
     aspect.init(false)
+    images.init()
     ladders.init()
     switchToState(STATE_ACTION)
 end

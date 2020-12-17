@@ -4,6 +4,7 @@
 local entities = {}
 
 local floors = require("modules.floors")
+local images = require("modules.images")
 local ladders = require("modules.ladders")
 
 entities.TYPE_PLAYER = 1
@@ -55,6 +56,20 @@ function entities.add(type,floor,floorXFraction)
                 accX = 1000, 
                 maxDy = 90,
                 accY = 1000
+            },
+            draw = {
+                dir = "right",
+                newDir = "right",
+                current = nil,
+                default = "landed",
+                landed = {
+                    left = {
+                        images.get(images.IMAGE_PLAYER_WALK_LEFT)
+                    },
+                    right = {
+                        images.get(images.IMAGE_PLAYER_WALK_RIGHT)
+                    }
+                }
             }
         }
     elseif type == entities.TYPE_ROBOT then
@@ -82,6 +97,12 @@ function entities.add(type,floor,floorXFraction)
             }
         }
     end
+
+    -- select initial image
+    if entity.draw ~= nil then
+        entity.draw.current = entity.draw[entity.draw.default]
+    end
+
     table.insert(list,entity)
 end
 
@@ -134,10 +155,16 @@ local function move(entity,dt)
         if entity.move.dx < -entity.move.maxDx then
             entity.move.dx = -entity.move.maxDx
         end
+        if entity.draw ~= nil then
+            entity.draw.newDir = "left"
+        end
     elseif right then
         entity.move.dx = entity.move.dx + entity.move.accX*dt
         if entity.move.dx > entity.move.maxDx then
             entity.move.dx = entity.move.maxDx
+        end
+        if entity.draw ~= nil then
+            entity.draw.newDir = "right"
         end
     else
         -- during climbing there is no momentum
@@ -265,7 +292,16 @@ function entities.draw()
     love.graphics.setColor(1,1,1)
     for i = 1, #list do
         local entity = list[i]
-        love.graphics.rectangle("fill",entity.x-entity.w/2,entity.y-entity.h,entity.w,entity.h)
+        if entity.draw ~= nil then
+            if entity.draw.current ~= nil then
+                if entity.draw.newDir ~= entity.draw.dir then
+                    -- ...
+                    entity.draw.dir = entity.draw.newDir
+                end
+                local sprite = entity.draw.current[entity.draw.dir][1]
+                love.graphics.draw(sprite.image,entity.x-sprite.w/2,entity.y-sprite.h)
+            end
+        end
     end
 end
 
