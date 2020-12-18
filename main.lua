@@ -10,15 +10,17 @@ local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(0,0,0)
+local LIVES = 3
+
 local STATE_TITLE = 1
 local STATE_ACTION = 2
 local STATE_GAME_OVER = 3
 
 local state
+local lives
 
 --[[ Todo:
 - LATER: title screen, next level screen, game over screen
-- robots can walk
 - robots can go bad
 - LATER: cats can walk
 - LATER: player can pick up and drop cats (arrow keys up and down while not on a ladder OR: x?)
@@ -56,8 +58,15 @@ function switchToState(new)
     end
     state = new
     if state == STATE_ACTION then
-        entities.add(entities.TYPE_PLAYER,1,0.2)
-        entities.add(entities.TYPE_ROBOT,2,0.4)
+        lives = LIVES
+
+        entities.add(entities.TYPE_PLAYER,2,0.2)
+        entities.add(entities.TYPE_ROBOT,3,0.3)
+        entities.add(entities.TYPE_ROBOT,3,0.7)
+        entities.add(entities.TYPE_ROBOT,2,0.3)
+        entities.add(entities.TYPE_ROBOT,2,0.7)
+        entities.add(entities.TYPE_ROBOT,1,0.3)
+        entities.add(entities.TYPE_ROBOT,1,0.7)
     end
 end
 
@@ -72,13 +81,20 @@ function love.keypressed(key)
         elseif key == "space" then
             entities.setInput("jump")
         end
+    end
+end
 
+function drawOnScreenInfo()
+    love.graphics.setColor(1,1,1)
+    for i = 1, lives do
+        love.graphics.draw(images.get(images.IMAGE_LIFE_ICON).image,20+(i-1)*20,aspect.GAME_HEIGHT-14)
     end
 end
 
 function love.draw()
     aspect.apply()
     love.graphics.clear(BACKGROUND_COLOR)
+    drawOnScreenInfo()
     floors.draw()
     ladders.draw()
     entities.draw()

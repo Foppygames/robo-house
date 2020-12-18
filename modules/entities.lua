@@ -11,6 +11,7 @@ entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
 
 local list = {}
+local resetKeyDownNeeded = false
 
 local input = {
     jump = false
@@ -100,7 +101,7 @@ function entities.add(type,floor,floorXFraction)
                 oldY = 0,
                 appliedDy = 0,
                 maxDx = 20,
-                accX = 200,
+                accX = 40,
                 landed = false
             },
             draw = {
@@ -128,6 +129,13 @@ function entities.add(type,floor,floorXFraction)
         entity.draw.current = entity.draw[entity.draw.default]
     end
 
+    -- change robot direction per floor
+    if type == entities.TYPE_ROBOT and floor % 2 ~= 0 then
+        entity.ai.dir = "left"
+        entity.draw.dir = "left"
+        entity.draw.newDir = "left"
+    end
+
     table.insert(list,entity)
 end
 
@@ -140,10 +148,15 @@ local function action(entity)
         entity.action.left = (entity.ai.dir == "left")
         entity.action.right = (entity.ai.dir == "right")
     else
+        if resetKeyDownNeeded then
+            if not love.keyboard.isDown("down") then
+                resetKeyDownNeeded = false
+            end
+        end
         entity.action.left = love.keyboard.isDown("left")
         entity.action.right = love.keyboard.isDown("right")
         entity.action.up = love.keyboard.isDown("up")
-        entity.action.down = love.keyboard.isDown("down")
+        entity.action.down = love.keyboard.isDown("down") and not resetKeyDownNeeded
         entity.action.jump = input.jump
     end
 end
@@ -256,13 +269,24 @@ local function land(entity)
         if entity.move.dy > 0 then
             local landed, floor, y = floors.land(entity.x,entity.w,entity.move.oldY,entity.y)
             if landed then
-                -- entity is climbing through floor that is not the floor the ladder is standing on
-                if entity.climb ~= nil and entity.climb.climbing and entity.climb.floor ~= floor then
-                    landed = false
+                -- entity is climbing... 
+                if entity.climb ~= nil and entity.climb.climbing then
+                    -- ...through floor that is not the floor the ladder is standing on
+                    if entity.climb.floor ~= floor then
+                        landed = false
+                    -- ...on to the floor the ladder is standing on
+                    else
+                        entity.climb.climbing = false
+
+                        -- entity uses keyboard for input
+                        if entity.ai == nil then
+                            -- key down has to be released to be registered again
+                            resetKeyDownNeeded = true
+                        end
+                    end
                 end
             end
             entity.move.landed = landed
-            --entity.move.floor = floor
             if landed then
                 entity.y = y
                 entity.move.dy = 0
@@ -282,7 +306,7 @@ local function climb(entity)
         if getAction(entity,"up") or getAction(entity,"down") then
             local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
             if grab then
-                entity.move.dx = 0
+                --entity.move.dx = 0
                 entity.move.dy = 0
                 entity.climb.climbing = true
                 entity.climb.floor = floor
@@ -346,7 +370,7 @@ function entities.update(dt)
     }
 end
 
-function entities.draw(dt)
+function entities.draw()
     love.graphics.setColor(1,1,1)
     for i = 1, #list do
         local entity = list[i]

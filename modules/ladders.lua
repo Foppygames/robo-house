@@ -8,8 +8,8 @@ local utils = require("modules.utils")
 
 local LADDER_WIDTH = 16
 local LADDER_COLOR = utils.getColorFromRgb(255,236,39)
-local LADDER_STEP_SIZE = 12
-local LADDER_LINE_WIDTH = 4
+local LADDER_STEP_SIZE = 10
+local LADDER_LINE_WIDTH = 3
 
 local list = {}
 
@@ -29,7 +29,7 @@ function ladders.init()
     local floorCount = floors.getCount()
     for i = 1, floorCount-1 do
         for j = 0, 1 do
-            local floorXFraction = 0.1 + (i-1) * 0.1
+            local floorXFraction = 0.1 + (i-1) * 0.2
             if j == 1 then
                 floorXFraction = 1 - floorXFraction
             end
