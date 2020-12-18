@@ -61,14 +61,19 @@ function entities.add(type,floor,floorXFraction)
                 dir = "right",
                 newDir = "right",
                 current = nil,
+                frame = 1,
+                clock = 0,
                 default = "landed",
                 landed = {
                     left = {
-                        images.get(images.IMAGE_PLAYER_WALK_LEFT)
+                        images.get(images.IMAGE_PLAYER_WALK_LEFT_1),
+                        images.get(images.IMAGE_PLAYER_WALK_LEFT_2)
                     },
                     right = {
-                        images.get(images.IMAGE_PLAYER_WALK_RIGHT)
-                    }
+                        images.get(images.IMAGE_PLAYER_WALK_RIGHT_1),
+                        images.get(images.IMAGE_PLAYER_WALK_RIGHT_2)
+                    },
+                    time = 0.2
                 }
             }
         }
@@ -257,6 +262,26 @@ local function climb(entity)
     end
 end
 
+local function draw(entity,dt)
+    if entity.draw.current ~= nil then
+        -- animate
+        entity.draw.clock = entity.draw.clock + dt
+        if entity.draw.clock >= entity.draw.current.time then
+            entity.draw.frame = entity.draw.frame + 1
+            if entity.draw.frame > #entity.draw.current[entity.draw.dir] then
+                entity.draw.frame = 1
+            end
+            entity.draw.clock = entity.draw.clock - entity.draw.current.time
+        end
+
+        -- change direction
+        if entity.draw.newDir ~= entity.draw.dir then
+            -- ...
+            entity.draw.dir = entity.draw.newDir
+        end
+    end    
+end
+
 function entities.update(dt)
     for i = 1, #list do
         local entity = list[i]
@@ -279,6 +304,9 @@ function entities.update(dt)
         if entity.move ~= nil then
             move(entity,dt)
             land(entity)
+        end
+        if entity.draw ~= nil then
+            draw(entity,dt)
         end   
     end
 
@@ -288,17 +316,13 @@ function entities.update(dt)
     }
 end
 
-function entities.draw()
+function entities.draw(dt)
     love.graphics.setColor(1,1,1)
     for i = 1, #list do
         local entity = list[i]
         if entity.draw ~= nil then
             if entity.draw.current ~= nil then
-                if entity.draw.newDir ~= entity.draw.dir then
-                    -- ...
-                    entity.draw.dir = entity.draw.newDir
-                end
-                local sprite = entity.draw.current[entity.draw.dir][1]
+                local sprite = entity.draw.current[entity.draw.dir][entity.draw.frame]
                 love.graphics.draw(sprite.image,entity.x-sprite.w/2,entity.y-sprite.h)
             end
         end
