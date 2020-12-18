@@ -28,7 +28,7 @@ function entities.add(type,floor,floorXFraction)
             y = y,
             w = 16,
             h = 16,
-            input = {
+            action = {
                 left = false,
                 right = false,
                 jump = false,
@@ -81,24 +81,44 @@ function entities.add(type,floor,floorXFraction)
         entity = {
             x = x,
             y = y,
-            w = 16,
-            h = 16,
-            ai = {
+            w = 20,
+            h = 32,
+            action = {
                 left = false,
                 right = false,
                 jump = false,
                 up = false,
                 down = false
             },
+            ai = {
+                dir = "right",
+                turnFloorFraction = 0.95
+            },
             move = {
                 dx = 0,
                 dy = 0,
                 oldY = 0,
                 appliedDy = 0,
-                maxDx = 50,
-                accX = 500,
-                landed = false,
-                climbing = false
+                maxDx = 20,
+                accX = 200,
+                landed = false
+            },
+            draw = {
+                dir = "right",
+                newDir = "right",
+                current = nil,
+                frame = 1,
+                clock = 0,
+                default = "landed",
+                landed = {
+                    left = {
+                        images.get(images.IMAGE_ROBOT_WALK_LEFT_1)
+                    },
+                    right = {
+                        images.get(images.IMAGE_ROBOT_WALK_RIGHT_1)
+                    },
+                    time = 0.2
+                }
             }
         }
     end
@@ -115,24 +135,35 @@ function entities.setInput(key)
     input[key] = true
 end
 
-local function _input(entity)
-    entity.input.left = love.keyboard.isDown("left")
-    entity.input.right = love.keyboard.isDown("right")
-    entity.input.up = love.keyboard.isDown("up")
-    entity.input.down = love.keyboard.isDown("down")
-    entity.input.jump = input.jump
+local function action(entity)
+    if entity.ai ~= nil then  
+        entity.action.left = (entity.ai.dir == "left")
+        entity.action.right = (entity.ai.dir == "right")
+    else
+        entity.action.left = love.keyboard.isDown("left")
+        entity.action.right = love.keyboard.isDown("right")
+        entity.action.up = love.keyboard.isDown("up")
+        entity.action.down = love.keyboard.isDown("down")
+        entity.action.jump = input.jump
+    end
 end
 
 local function ai(entity)
-    -- ...
+    local fraction = floors.getFraction(entity.x)
+    if entity.ai.dir == "left" then
+        if fraction <= (1 - entity.ai.turnFloorFraction) then
+            entity.ai.dir = "right"
+        end
+    elseif entity.ai.dir == "right" then
+        if fraction >= entity.ai.turnFloorFraction then
+            entity.ai.dir = "left"
+        end
+    end
 end
 
-local function getInput(entity,key)
-    if entity.input ~= nil then
-        return entity.input[key]
-    end
-    if entity.ai ~= nil then
-        return entity.ai[key]
+local function getAction(entity,type)
+    if entity.action ~= nil then
+        return entity.action[type]
     end
     return false
 end
@@ -153,8 +184,8 @@ end
 
 local function move(entity,dt)
     entity.move.oldY = entity.y
-    local left = getInput(entity,"left")
-    local right = getInput(entity,"right")
+    local left = getAction(entity,"left")
+    local right = getAction(entity,"right")
     if left then
         entity.move.dx = entity.move.dx - entity.move.accX*dt
         if entity.move.dx < -entity.move.maxDx then
@@ -180,8 +211,8 @@ local function move(entity,dt)
         end
     end
     if entity.climb ~= nil and entity.climb.climbing then
-        local up = getInput(entity,"up")
-        local down = getInput(entity,"down")
+        local up = getAction(entity,"up")
+        local down = getAction(entity,"down")
         if up then
             entity.move.dy = entity.move.dy - entity.climb.accX*dt
             if entity.move.dy < -entity.climb.maxDy then
@@ -202,12 +233,10 @@ local function move(entity,dt)
 end
 
 local function jump(entity)
-    if getInput(entity,"jump") then
-        if entity.move ~= nil then
-            if entity.move.landed then
-                entity.move.dy = -entity.jump.power
-                entity.move.landed = false
-            end
+    if getAction(entity,"jump") then
+        if entity.move ~= nil and entity.move.landed then
+            entity.move.dy = -entity.jump.power
+            entity.move.landed = false
         end
     end
 end
@@ -233,6 +262,7 @@ local function land(entity)
                 end
             end
             entity.move.landed = landed
+            --entity.move.floor = floor
             if landed then
                 entity.y = y
                 entity.move.dy = 0
@@ -249,7 +279,7 @@ local function climb(entity)
         entity.climb.floor = floor
     -- entity is not climbing
     else
-        if getInput(entity,"up") or getInput(entity,"down") then
+        if getAction(entity,"up") or getAction(entity,"down") then
             local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
             if grab then
                 entity.move.dx = 0
@@ -286,11 +316,11 @@ function entities.update(dt)
     for i = 1, #list do
         local entity = list[i]
         
-        if entity.input ~= nil then
-            _input(entity)
-        end
         if entity.ai ~= nil then
             ai(entity)
+        end
+        if entity.action ~= nil then
+            action(entity)
         end
         if entity.jump ~= nil then
             jump(entity)

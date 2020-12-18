@@ -7,7 +7,7 @@ local floors = require("modules.floors")
 local utils = require("modules.utils")
 
 local LADDER_WIDTH = 16
-local LADDER_COLOR = utils.getColorFromRgb(0,228,54)
+local LADDER_COLOR = utils.getColorFromRgb(255,236,39)
 local LADDER_STEP_SIZE = 12
 local LADDER_LINE_WIDTH = 4
 

@@ -31,6 +31,11 @@ function floors.getLocation(floor,floorXFraction)
     return x, y
 end
 
+-- returns fraction of floor width corresponding to provided x
+function floors.getFraction(x)
+    return (x - FLOOR_X) / FLOOR_WIDTH
+end
+
 -- returns number of floor and true and new y, or false and nil and old y
 function floors.land(x,w,oldY,newY)
     local diff = math.abs(x - (FLOOR_X+FLOOR_WIDTH/2))

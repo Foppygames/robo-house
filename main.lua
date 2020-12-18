@@ -9,7 +9,7 @@ local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
-local BACKGROUND_COLOR = utils.getColorFromRgb(0,135,81)
+local BACKGROUND_COLOR = utils.getColorFromRgb(0,0,0)
 local STATE_TITLE = 1
 local STATE_ACTION = 2
 local STATE_GAME_OVER = 3
@@ -57,6 +57,7 @@ function switchToState(new)
     state = new
     if state == STATE_ACTION then
         entities.add(entities.TYPE_PLAYER,1,0.2)
+        entities.add(entities.TYPE_ROBOT,2,0.4)
     end
 end
 
