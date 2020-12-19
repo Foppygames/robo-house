@@ -10,7 +10,7 @@ local FLOOR_COUNT = 3
 local FLOOR_Y_START = utils.round(aspect.GAME_HEIGHT*0.9)
 local FLOOR_Y_STEP = utils.round(FLOOR_Y_START / FLOOR_COUNT)
 local FLOOR_HEIGHT = 3
-local FLOOR_WIDTH = utils.round(aspect.GAME_WIDTH * 0.9)
+local FLOOR_WIDTH = utils.round(aspect.GAME_WIDTH * 1)
 local FLOOR_X = utils.round((aspect.GAME_WIDTH - FLOOR_WIDTH) / 2)
 local FLOOR_COLOR = utils.getColorFromRgb(255,163,0)
 

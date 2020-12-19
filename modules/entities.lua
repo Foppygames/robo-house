@@ -3,6 +3,7 @@
 
 local entities = {}
 
+local aspect = require("modules.aspect")
 local floors = require("modules.floors")
 local images = require("modules.images")
 local ladders = require("modules.ladders")
@@ -11,10 +12,10 @@ entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
 
 local list = {}
-local resetKeyDownNeeded = false
 
 local input = {
-    jump = false
+    jump = false,
+    resetKeyDownNeeded = false
 }
 
 function entities.reset()
@@ -76,6 +77,14 @@ function entities.add(type,floor,floorXFraction)
                     },
                     time = 0.2
                 }
+            },
+            collide = {
+                type = entities.TYPE_PLAYER,
+                w = 12,
+                h = 16
+            },
+            delete = {
+                delete = false
             }
         }
     elseif type == entities.TYPE_ROBOT then
@@ -83,7 +92,7 @@ function entities.add(type,floor,floorXFraction)
             x = x,
             y = y,
             w = 20,
-            h = 32,
+            h = 24,
             action = {
                 left = false,
                 right = false,
@@ -120,6 +129,15 @@ function entities.add(type,floor,floorXFraction)
                     },
                     time = 0.2
                 }
+            },
+            collide = {
+                type = entities.TYPE_ROBOT,
+                w = 18,
+                h = 24
+            },
+            button = {
+                hit = false,
+                h = 8
             }
         }
     end
@@ -148,15 +166,15 @@ local function action(entity)
         entity.action.left = (entity.ai.dir == "left")
         entity.action.right = (entity.ai.dir == "right")
     else
-        if resetKeyDownNeeded then
+        if input.resetKeyDownNeeded then
             if not love.keyboard.isDown("down") then
-                resetKeyDownNeeded = false
+                input.resetKeyDownNeeded = false
             end
         end
         entity.action.left = love.keyboard.isDown("left")
         entity.action.right = love.keyboard.isDown("right")
         entity.action.up = love.keyboard.isDown("up")
-        entity.action.down = love.keyboard.isDown("down") and not resetKeyDownNeeded
+        entity.action.down = love.keyboard.isDown("down") and not input.resetKeyDownNeeded
         entity.action.jump = input.jump
     end
 end
@@ -243,6 +261,12 @@ local function move(entity,dt)
     end
     entity.x = entity.x + entity.move.dx*dt
     entity.y = entity.y + entity.move.dy*dt
+    if entity.x <= entity.w/2 then
+        entity.x = entity.w/2
+    end
+    if entity.x >= aspect.GAME_WIDTH-entity.w/2 then
+        entity.x = aspect.GAME_WIDTH-entity.w/2
+    end
 end
 
 local function jump(entity)
@@ -281,7 +305,7 @@ local function land(entity)
                         -- entity uses keyboard for input
                         if entity.ai == nil then
                             -- key down has to be released to be registered again
-                            resetKeyDownNeeded = true
+                            input.resetKeyDownNeeded = true
                         end
                     end
                 end
@@ -336,6 +360,105 @@ local function draw(entity,dt)
     end    
 end
 
+-- returns: collision, button
+local function collidePlayerRobot(player,robot)
+    local diffX = math.abs(robot.x-player.x)
+    if diffX > (player.collide.w/2+robot.collide.w/2) then
+        return
+    end
+    if player.y > robot.y+player.collide.h then
+        return
+    end
+    if player.y < robot.y-robot.collide.h then
+        return
+    end
+    if robot.button ~= nil then
+        if player.y <= robot.y-robot.h+robot.button.h then
+            robot.button.hit = true
+            if player.move ~= nil then
+                if player.move.dy > 0 then
+                    player.y = robot.y-robot.h
+                    player.move.dy = -player.move.dy
+                elseif player.move.dx > 0 then
+                    player.x = robot.x-robot.w/2-player.w/2
+                    player.move.dx = -player.move.dx*1.5
+                else
+                    player.x = robot.x+robot.w/2+player.w/2
+                    player.move.dx = -player.move.dx*1.5
+                end
+            end
+        else
+            -- player hit
+            -- ...
+        end
+    else
+        -- player hit
+        -- ...
+    end
+end
+
+-- returns: collision, delete first, delete second
+local function collide(entity,other)
+    if entity.collide.type == entities.TYPE_PLAYER then
+        if other.collide.type == entities.TYPE_ROBOT then
+            collidePlayerRobot(entity,other)
+            --[[local collision, button = collidePlayerRobot(entity,other)
+            if collision then
+                return true, true, false
+            end]]--
+        end
+    end
+    if other.collide.type == entities.TYPE_PLAYER then
+        if entity.collide.type == entities.TYPE_ROBOT then
+            collidePlayerRobot(other,entity)
+            --[[local collision, button = collidePlayerRobot(other,entity)
+            if collision then
+                return true, false, true
+            end]]--
+        end
+    end
+    --return false, false, false
+end
+
+local function collisions()
+    for i = 1, #list do
+        local entity = list[i]
+        -- entity can collide
+        if entity.collide ~= nil then
+            -- check all entities below this one in list
+            for j = i+1, #list do
+                local other = list[j]
+                -- other can collide
+                if other.collide ~= nil then
+                    -- same type cannot collide
+                    if entity.collide.type ~=  other.collide.type then
+                        collide(entity,other)
+                        --[[local collision, deleteFirst, deleteSecond = collide(entity,other)
+                        if collision then
+                            if deleteFirst then
+                                if entity.delete ~= nil then
+                                    entity.delete.delete = true
+                                end
+                            end
+                            if deleteSecond then
+                                if other.delete ~= nil then
+                                    other.delete.delete = true
+                                end
+                            end
+                        end]]--
+                    end
+                end
+            end
+        end
+    end
+
+    for i = #list, 1, -1 do
+        if list[i].delete ~= nil and list[i].delete.delete then
+            table.remove(list,i)
+        end
+    end
+end
+
 function entities.update(dt)
     for i = 1, #list do
         local entity = list[i]
@@ -363,6 +486,8 @@ function entities.update(dt)
             draw(entity,dt)
         end   
     end
+
+    collisions()
 
     -- reset input
     input = {
