@@ -41,7 +41,7 @@ local lives
 
 function love.load()
     love.window.setTitle(GAME_TITLE)
-	love.graphics.setDefaultFilter("nearest","nearest",1)
+	love.graphics.setDefaultFilter("nearest","nearest")
 	love.graphics.setLineStyle("rough")
     love.graphics.setFont(love.graphics.newFont("Retroville_NC.ttf",10))
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)

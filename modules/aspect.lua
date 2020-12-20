@@ -97,8 +97,8 @@ function aspect.init(fullScreen)
 		gameX = 0
 		gameY = 0
 	end
-	
-	love.window.setMode(aspect.WINDOW_WIDTH,aspect.WINDOW_HEIGHT,{fullscreen=fullScreen,fullscreentype="desktop"})	
+    
+    love.window.setMode(aspect.WINDOW_WIDTH,aspect.WINDOW_HEIGHT,{fullscreen=fullScreen,fullscreentype="desktop"})	
 end
 
 function aspect.apply()

@@ -7,6 +7,7 @@ local aspect = require("modules.aspect")
 local floors = require("modules.floors")
 local images = require("modules.images")
 local ladders = require("modules.ladders")
+local utils = require("modules.utils")
 
 entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
@@ -76,12 +77,26 @@ function entities.add(type,floor,floorXFraction)
                         images.get(images.IMAGE_PLAYER_WALK_RIGHT_2)
                     },
                     time = 0.2
+                },
+                explosion = {
+                    both = {
+                        images.get(images.IMAGE_PLAYER_EXPLOSION_1),
+                        images.get(images.IMAGE_PLAYER_EXPLOSION_2),
+                        images.get(images.IMAGE_PLAYER_EXPLOSION_3)
+                    },
+                    time = 0.06
                 }
             },
             collide = {
                 type = entities.TYPE_PLAYER,
                 w = 12,
                 h = 16
+            },
+            die = {
+                dying = false,
+                draw = "explosion",
+                clock = 0,
+                time = 3
             },
             delete = {
                 delete = false
@@ -340,6 +355,17 @@ local function climb(entity)
     end
 end
 
+local function die(entity,dt)
+    if entity.die.dying then
+        entity.die.clock = entity.die.clock + dt
+        if entity.die.clock >= entity.die.time then
+            if entity.delete ~= nil then
+                entity.delete.delete = true
+            end
+        end
+    end    
+end
+
 local function draw(entity,dt)
     if entity.draw.current ~= nil then
         -- animate
@@ -360,7 +386,6 @@ local function draw(entity,dt)
     end    
 end
 
--- returns: collision, button
 local function collidePlayerRobot(player,robot)
     local diffX = math.abs(robot.x-player.x)
     if diffX > (player.collide.w/2+robot.collide.w/2) then
@@ -372,6 +397,7 @@ local function collidePlayerRobot(player,robot)
     if player.y < robot.y-robot.collide.h then
         return
     end
+    local playerHit = false
     if robot.button ~= nil then
         if player.y <= robot.y-robot.h+robot.button.h then
             robot.button.hit = true
@@ -388,36 +414,51 @@ local function collidePlayerRobot(player,robot)
                 end
             end
         else
-            -- player hit
-            -- ...
+            playerHit = true
         end
     else
-        -- player hit
-        -- ...
+        playerHit = true
+    end
+    if playerHit then
+        if player.die ~= nil then
+            player.die.dying = true
+
+            -- remove player components
+            player.move = nil
+            player.jump = nil
+            player.fall = nil
+            player.climb = nil
+            player.collide = nil
+
+            -- remove components for non-player entities
+            for i = 1, #list do
+                local entity = list[i]
+                if entity.ai ~= nil then
+                    entity.move = nil
+                    entity.collide = nil
+                end
+            end
+
+            if player.draw[player.die.draw] ~= nil then
+                player.draw.current = player.draw[player.die.draw]
+                player.draw.dir = "both"
+                player.draw.newDir = "both"
+                player.draw.frame = 1
+            end
+        end
     end
 end
 
--- returns: collision, delete first, delete second
 local function collide(entity,other)
     if entity.collide.type == entities.TYPE_PLAYER then
         if other.collide.type == entities.TYPE_ROBOT then
             collidePlayerRobot(entity,other)
-            --[[local collision, button = collidePlayerRobot(entity,other)
-            if collision then
-                return true, true, false
-            end]]--
         end
-    end
-    if other.collide.type == entities.TYPE_PLAYER then
+    elseif other.collide.type == entities.TYPE_PLAYER then
         if entity.collide.type == entities.TYPE_ROBOT then
             collidePlayerRobot(other,entity)
-            --[[local collision, button = collidePlayerRobot(other,entity)
-            if collision then
-                return true, false, true
-            end]]--
         end
     end
-    --return false, false, false
 end
 
 local function collisions()
@@ -433,25 +474,20 @@ local function collisions()
                     -- same type cannot collide
                     if entity.collide.type ~=  other.collide.type then
                         collide(entity,other)
-                        --[[local collision, deleteFirst, deleteSecond = collide(entity,other)
-                        if collision then
-                            if deleteFirst then
-                                if entity.delete ~= nil then
-                                    entity.delete.delete = true
-                                end
-                            end
-                            if deleteSecond then
-                                if other.delete ~= nil then
-                                    other.delete.delete = true
-                                end
-                            end
-                        end]]--
+
+                        -- entity no longer colliding
+                        if entity.collide == nil then
+                            -- skip rest of others
+                            break
+                        end
                     end
                 end
             end
         end
     end
+end
 
+local function deletion()
     for i = #list, 1, -1 do
         if list[i].delete ~= nil and list[i].delete.delete then
             table.remove(list,i)
@@ -482,12 +518,16 @@ function entities.update(dt)
             move(entity,dt)
             land(entity)
         end
+        if entity.die ~= nil then
+            die(entity,dt)
+        end
         if entity.draw ~= nil then
             draw(entity,dt)
         end   
     end
 
     collisions()
+    deletion()
 
     -- reset input
     input = {
@@ -502,7 +542,13 @@ function entities.draw()
         if entity.draw ~= nil then
             if entity.draw.current ~= nil then
                 local sprite = entity.draw.current[entity.draw.dir][entity.draw.frame]
-                love.graphics.draw(sprite.image,entity.x-sprite.w/2,entity.y-sprite.h)
+                local x = entity.x-sprite.w/2
+                local y = entity.y-sprite.h
+                if entity.die ~= nil and entity.die.dying then
+                    x = x + math.random(-1,1)
+                    y = y + math.random(-1,1)
+                end
+                love.graphics.draw(sprite.image,x,y)
             end
         end
     end
