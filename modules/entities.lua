@@ -78,6 +78,15 @@ function entities.add(type,floor,floorXFraction)
                     },
                     time = 0.2
                 },
+                jump = {
+                    left = {
+                        images.get(images.IMAGE_PLAYER_JUMP_LEFT)
+                    },
+                    right = {
+                        images.get(images.IMAGE_PLAYER_JUMP_RIGHT)
+                    },
+                    time = 0.2
+                },
                 explosion = {
                     both = {
                         images.get(images.IMAGE_PLAYER_EXPLOSION_1),
@@ -289,6 +298,15 @@ local function jump(entity)
         if entity.move ~= nil and entity.move.landed then
             entity.move.dy = -entity.jump.power
             entity.move.landed = false
+
+            -- switch to animation used for jumping
+            if entity.draw.jump ~= nil then
+                if entity.draw.current ~= entity.draw.jump then
+                    entity.draw.current = entity.draw.jump
+                    entity.draw.frame = 1
+                    entity.draw.clock = 0
+                end
+            end
         end
     end
 end
@@ -329,6 +347,15 @@ local function land(entity)
             if landed then
                 entity.y = y
                 entity.move.dy = 0
+
+                -- switch to animation used for walking
+                if entity.draw.landed ~= nil then
+                    if entity.draw.current ~= entity.draw.landed then
+                        entity.draw.current = entity.draw.landed
+                        entity.draw.frame = 1
+                        entity.draw.clock = 0
+                    end
+                end
             end
         end
     end
@@ -345,11 +372,19 @@ local function climb(entity)
         if getAction(entity,"up") or getAction(entity,"down") then
             local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
             if grab then
-                --entity.move.dx = 0
                 entity.move.dy = 0
                 entity.climb.climbing = true
                 entity.climb.floor = floor
                 entity.move.landed = false
+
+                -- switch to animation used for climbing
+                if entity.draw.landed ~= nil then
+                    if entity.draw.current ~= entity.draw.landed then
+                        entity.draw.current = entity.draw.landed
+                        entity.draw.frame = 1
+                        entity.draw.clock = 0
+                    end
+                end
             end
         end
     end
@@ -380,7 +415,6 @@ local function draw(entity,dt)
 
         -- change direction
         if entity.draw.newDir ~= entity.draw.dir then
-            -- ...
             entity.draw.dir = entity.draw.newDir
         end
     end    
@@ -487,14 +521,21 @@ local function collisions()
     end
 end
 
+-- returns true if player deleted
 local function deletion()
+    local playerDeleted = false
     for i = #list, 1, -1 do
         if list[i].delete ~= nil and list[i].delete.delete then
+            if list[i].ai == nil then
+                playerDeleted = true
+            end
             table.remove(list,i)
         end
     end
+    return playerDeleted
 end
 
+-- returns whether game continues
 function entities.update(dt)
     for i = 1, #list do
         local entity = list[i]
@@ -527,12 +568,14 @@ function entities.update(dt)
     end
 
     collisions()
-    deletion()
+    local continue = not deletion()
 
     -- reset input
     input = {
         jump = false
     }
+
+    return continue
 end
 
 function entities.draw()

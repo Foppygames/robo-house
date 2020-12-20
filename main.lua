@@ -18,6 +18,7 @@ local STATE_GAME_OVER = 3
 
 local state
 local lives
+local titleAngle = 0
 
 --[[ Todo:
 - LATER: title screen, next level screen, game over screen
@@ -49,7 +50,7 @@ function love.load()
     aspect.init(false)
     images.init()
     ladders.init()
-    switchToState(STATE_ACTION)
+    switchToState(STATE_TITLE)
 end
 
 function switchToState(new)
@@ -57,7 +58,9 @@ function switchToState(new)
         entities.reset()
     end
     state = new
-    if state == STATE_ACTION then
+    if state == STATE_TITLE then
+        titleAngle = 0
+    elseif state == STATE_ACTION then
         lives = LIVES
 
         entities.add(entities.TYPE_PLAYER,2,0.2)
@@ -71,13 +74,30 @@ function switchToState(new)
 end
 
 function love.update(dt)
-    entities.update(dt)
+    if state == STATE_TITLE then
+        titleAngle = titleAngle + 12 * dt
+        if titleAngle >= 360 then
+            titleAngle = titleAngle - 360
+        end
+    end
+    if state == STATE_ACTION then
+        if not entities.update(dt) then
+            switchToState(STATE_TITLE)
+        end
+    end
 end
 
 function love.keypressed(key)
-    if state == STATE_ACTION then
+    if state == STATE_TITLE then
         if key == "escape" then
             love.event.quit()
+        elseif key == "space" then
+            switchToState(STATE_ACTION)
+        end
+    end
+    if state == STATE_ACTION then
+        if key == "escape" then
+            switchToState(STATE_TITLE)
         elseif key == "space" then
             entities.setInput("jump")
         end
@@ -91,12 +111,47 @@ function drawOnScreenInfo()
     end
 end
 
+function drawTitleScreen()
+    love.graphics.push()
+    love.graphics.scale(2,2)
+    love.graphics.setColor(utils.getColorFromRgb(255,163,0))
+    for i = 1, string.len(GAME_TITLE) do
+        local angle = titleAngle + i * 12
+        if angle >= 360 then
+            angle = angle - 360
+        end
+        love.graphics.print(string.sub(GAME_TITLE,i,i),30 + i * 10 - math.cos(math.rad(angle)*5),6-math.sin(math.rad(angle)*20))
+	end
+    love.graphics.pop()
+    love.graphics.setColor(utils.getColorFromRgb(255,236,39))
+    love.graphics.printf("For the #Redefine2021 gamejam!",0,60,aspect.GAME_WIDTH,"center")	
+    
+    love.graphics.setColor(utils.getColorFromRgb(41,173,255))
+    love.graphics.printf("Controls: arrow keys and space",0,90,aspect.GAME_WIDTH,"center")	
+    love.graphics.printf("PRESS SPACE TO START",0,110,aspect.GAME_WIDTH,"center")	
+    love.graphics.setColor(utils.getColorFromRgb(131,118,156))
+    love.graphics.printf("Press Esc to quit",0,130,aspect.GAME_WIDTH,"center")	
+
+    love.graphics.setColor(utils.getColorFromRgb(255,241,232))
+    love.graphics.printf("Code & gfx by Robbert Prins",0,aspect.GAME_HEIGHT-40,aspect.GAME_WIDTH,"center")	
+    love.graphics.setColor(utils.getColorFromRgb(255,236,39))
+    love.graphics.printf("Foppygames 2020",0,aspect.GAME_HEIGHT-20,aspect.GAME_WIDTH,"center")	
+end
+
 function love.draw()
     aspect.apply()
     love.graphics.clear(BACKGROUND_COLOR)
-    drawOnScreenInfo()
-    floors.draw()
-    ladders.draw()
-    entities.draw()
+
+    if state == STATE_TITLE then
+        drawTitleScreen()
+    end
+
+    if state == STATE_ACTION then
+        --drawOnScreenInfo()
+        floors.draw()
+        ladders.draw()
+        entities.draw()
+    end
+
     aspect.letterbox()
 end
