@@ -10,29 +10,21 @@ local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(0,0,0)
-local LIVES = 3
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
 local STATE_GAME_OVER = 3
 
 local state
-local lives
 local titleAngle = 0
 
 --[[ Todo:
-- LATER: title screen, next level screen, game over screen
 - robots can go bad
 - LATER: cats can walk
-- LATER: player can pick up and drop cats (arrow keys up and down while not on a ladder OR: x?)
 - robots can break down and go evil
 - LATER: evil robots can hurt cats
-- evil robots can hurt player
 - LATER: spikes on floors can hurt player
 - player can repair robots by jumping over them
-- hurting means losing a life
-- losing a life but lives remaining means reset level
-- losing a life and none remaining means game over
 - keep track of time of day
 - reaching end of day means next level
 - sound
@@ -61,8 +53,6 @@ function switchToState(new)
     if state == STATE_TITLE then
         titleAngle = 0
     elseif state == STATE_ACTION then
-        lives = LIVES
-
         entities.add(entities.TYPE_PLAYER,2,0.2)
         entities.add(entities.TYPE_ROBOT,3,0.3)
         entities.add(entities.TYPE_ROBOT,3,0.7)
@@ -104,12 +94,12 @@ function love.keypressed(key)
     end
 end
 
-function drawOnScreenInfo()
+--[[function drawOnScreenInfo()
     love.graphics.setColor(1,1,1)
     for i = 1, lives do
         love.graphics.draw(images.get(images.IMAGE_LIFE_ICON).image,20+(i-1)*20,aspect.GAME_HEIGHT-14)
     end
-end
+end]]--
 
 function drawTitleScreen()
     love.graphics.push()
