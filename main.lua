@@ -10,6 +10,7 @@ local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(0,0,0)
+local FULL_SCREEN = false
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
@@ -39,7 +40,7 @@ function love.load()
     love.graphics.setFont(love.graphics.newFont("Retroville_NC.ttf",10))
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)
 
-    aspect.init(false)
+    aspect.init(FULL_SCREEN)
     images.init()
     ladders.init()
     switchToState(STATE_TITLE)
@@ -54,12 +55,20 @@ function switchToState(new)
         titleAngle = 0
     elseif state == STATE_ACTION then
         entities.add(entities.TYPE_PLAYER,2,0.2)
+
         entities.add(entities.TYPE_ROBOT,3,0.3)
         entities.add(entities.TYPE_ROBOT,3,0.7)
         entities.add(entities.TYPE_ROBOT,2,0.3)
         entities.add(entities.TYPE_ROBOT,2,0.7)
         entities.add(entities.TYPE_ROBOT,1,0.3)
         entities.add(entities.TYPE_ROBOT,1,0.7)
+
+        entities.add(entities.TYPE_KITTEN,3,0.1)
+        entities.add(entities.TYPE_KITTEN,3,0.9)
+        entities.add(entities.TYPE_KITTEN,2,0.1)
+        entities.add(entities.TYPE_KITTEN,2,0.9)
+        entities.add(entities.TYPE_KITTEN,1,0.1)
+        entities.add(entities.TYPE_KITTEN,1,0.9)
     end
 end
 

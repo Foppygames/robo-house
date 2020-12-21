@@ -11,6 +11,7 @@ local utils = require("modules.utils")
 
 entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
+entities.TYPE_KITTEN = 3
 
 local list = {}
 
@@ -164,6 +165,69 @@ function entities.add(type,floor,floorXFraction)
                 h = 8
             }
         }
+    elseif type == entities.TYPE_KITTEN then
+        entity = {
+            x = x,
+            y = y,
+            w = 10,
+            h = 9,
+            action = {
+                left = false,
+                right = false,
+                jump = false,
+                up = false,
+                down = false
+            },
+            ai = {
+                dir = "right",
+                clock = 0,
+                time = 0,
+                minTime = 3,
+                maxTime = 10
+            },
+            move = {
+                dx = 0,
+                dy = 0,
+                oldY = 0,
+                appliedDy = 0,
+                maxDx = 5,
+                accX = 10,
+                landed = false
+            },
+            draw = {
+                dir = "right",
+                newDir = "right",
+                current = nil,
+                frame = 1,
+                clock = 0,
+                default = "landed",
+                landed = {
+                    left = {
+                        images.get(images.IMAGE_KITTEN_WALK_LEFT_1),
+                        images.get(images.IMAGE_KITTEN_WALK_LEFT_2)
+                    },
+                    right = {
+                        images.get(images.IMAGE_KITTEN_WALK_RIGHT_1),
+                        images.get(images.IMAGE_KITTEN_WALK_RIGHT_2)
+                    },
+                    time = 0.2
+                },
+                sit = {
+                    left = {
+                        images.get(images.IMAGE_KITTEN_SIT_LEFT)
+                    },
+                    right = {
+                        images.get(images.IMAGE_KITTEN_SIT_RIGHT)
+                    },
+                    time = 0.2
+                }
+            },
+            --[[collide = {
+                type = entities.TYPE_KITTEN,
+                w = 10,
+                h = 9
+            },]]--
+        }
     end
 
     -- select initial image
@@ -203,15 +267,47 @@ local function action(entity)
     end
 end
 
-local function ai(entity)
-    local fraction = floors.getFraction(entity.x)
-    if entity.ai.dir == "left" then
-        if fraction <= (1 - entity.ai.turnFloorFraction) then
-            entity.ai.dir = "right"
+local function ai(entity,dt)
+    if entity.ai.turnFloorFraction ~= nil then
+        local fraction = floors.getFraction(entity.x)
+        if entity.ai.dir == "left" then
+            if fraction <= (1 - entity.ai.turnFloorFraction) then
+                entity.ai.dir = "right"
+            end
+        elseif entity.ai.dir == "right" then
+            if fraction >= entity.ai.turnFloorFraction then
+                entity.ai.dir = "left"
+            end
         end
-    elseif entity.ai.dir == "right" then
-        if fraction >= entity.ai.turnFloorFraction then
-            entity.ai.dir = "left"
+    elseif entity.ai.clock ~= nil then
+        entity.ai.clock = entity.ai.clock + dt
+        if entity.ai.clock >= entity.ai.time then
+            local dir = math.random(1,2)
+            if entity.ai.dir == "left" then
+                local dirs = {"right","none"}
+                entity.ai.dir = dirs[dir]
+            elseif entity.ai.dir == "right" then
+                local dirs = {"left","none"}
+                entity.ai.dir = dirs[dir]
+            elseif entity.ai.dir == "none" then
+                local dirs = {"right","left"}
+                entity.ai.dir = dirs[dir]
+            end
+            entity.ai.clock = 0
+            entity.ai.time = math.random(entity.ai.minTime,entity.ai.maxTime)
+            if entity.ai.dir == "none" then
+                if entity.draw.sit ~= nil then
+                    entity.draw.current = entity.draw.sit
+                    entity.draw.frame = 1
+                    entity.draw.clock = 0
+                end
+            else
+                if entity.draw.landed ~= nil then
+                    entity.draw.current = entity.draw.landed
+                    entity.draw.frame = 1
+                    entity.draw.clock = 0
+                end
+            end
         end
     end
 end
@@ -287,9 +383,17 @@ local function move(entity,dt)
     entity.y = entity.y + entity.move.dy*dt
     if entity.x <= entity.w/2 then
         entity.x = entity.w/2
+
+        if entity.ai ~= nil and entity.ai.dir == "left" then
+            entity.ai.dir = "right"
+        end
     end
     if entity.x >= aspect.GAME_WIDTH-entity.w/2 then
         entity.x = aspect.GAME_WIDTH-entity.w/2
+
+        if entity.ai ~= nil and entity.ai.dir == "right" then
+            entity.ai.dir = "left"
+        end
     end
 end
 
@@ -541,7 +645,7 @@ function entities.update(dt)
         local entity = list[i]
         
         if entity.ai ~= nil then
-            ai(entity)
+            ai(entity,dt)
         end
         if entity.action ~= nil then
             action(entity)
