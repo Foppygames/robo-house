@@ -13,7 +13,15 @@ entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
 entities.TYPE_KITTEN = 3
 
+local ATTACK_TIME = 20
+local ATTACK_INTERVAL_MAX = 15
+local ATTACK_INTERVAL_MIN = 5
+local ATTACK_INTERVAL_MARGIN = 3
+local ATTACK_INTERVAL_CHANGE = 1
+
 local list = {}
+local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
+local attackIntervalTime = ATTACK_INTERVAL_MAX
 
 local input = {
     jump = false,
@@ -22,6 +30,8 @@ local input = {
 
 function entities.reset()
     list = {}
+    attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
+    attackIntervalTime = ATTACK_INTERVAL_MAX
 end
 
 function entities.add(type,floor,floorXFraction)
@@ -127,6 +137,7 @@ function entities.add(type,floor,floorXFraction)
             },
             ai = {
                 dir = "right",
+                move = true,
                 turnFloorFraction = 0.95
             },
             move = {
@@ -163,6 +174,11 @@ function entities.add(type,floor,floorXFraction)
             button = {
                 hit = false,
                 h = 8
+            },
+            attack = {
+                attacking = false,
+                clock = 0,
+                time = 20
             }
         }
     elseif type == entities.TYPE_KITTEN then
@@ -180,6 +196,7 @@ function entities.add(type,floor,floorXFraction)
             },
             ai = {
                 dir = "right",
+                move = true,
                 clock = 0,
                 time = 0,
                 minTime = 3,
@@ -251,8 +268,8 @@ end
 
 local function action(entity)
     if entity.ai ~= nil then  
-        entity.action.left = (entity.ai.dir == "left")
-        entity.action.right = (entity.ai.dir == "right")
+        entity.action.left = (entity.ai.dir == "left" and entity.ai.move)
+        entity.action.right = (entity.ai.dir == "right" and entity.ai.move)
     else
         if input.resetKeyDownNeeded then
             if not love.keyboard.isDown("down") then
@@ -268,6 +285,10 @@ local function action(entity)
 end
 
 local function ai(entity,dt)
+    -- currently attacking
+    if entity.attack ~= nil and entity.attack.attacking then
+        return
+    end 
     if entity.ai.turnFloorFraction ~= nil then
         local fraction = floors.getFraction(entity.x)
         if entity.ai.dir == "left" then
@@ -282,20 +303,32 @@ local function ai(entity,dt)
     elseif entity.ai.clock ~= nil then
         entity.ai.clock = entity.ai.clock + dt
         if entity.ai.clock >= entity.ai.time then
-            local dir = math.random(1,2)
-            if entity.ai.dir == "left" then
-                local dirs = {"right","none"}
-                entity.ai.dir = dirs[dir]
-            elseif entity.ai.dir == "right" then
-                local dirs = {"left","none"}
-                entity.ai.dir = dirs[dir]
-            elseif entity.ai.dir == "none" then
-                local dirs = {"right","left"}
-                entity.ai.dir = dirs[dir]
+            local pick = math.random(1,2)
+            if entity.ai.move then
+                if entity.ai.dir == "left" then
+                    if pick == 1 then
+                        entity.ai.dir = "right"
+                    else
+                        entity.ai.move = false
+                    end
+                elseif entity.ai.dir == "right" then
+                    if pick == 1 then
+                        entity.ai.dir = "left"
+                    else
+                        entity.ai.move = false
+                    end
+                end
+            else
+                entity.ai.move = true
+                if pick == 1 then
+                    entity.ai.dir = "left"
+                else
+                    entity.ai.dir = "right"
+                end
             end
             entity.ai.clock = 0
             entity.ai.time = math.random(entity.ai.minTime,entity.ai.maxTime)
-            if entity.ai.dir == "none" then
+            if not entity.ai.move then
                 if entity.draw.sit ~= nil then
                     entity.draw.current = entity.draw.sit
                     entity.draw.frame = 1
@@ -541,14 +574,16 @@ local function collidePlayerRobot(player,robot)
             robot.button.hit = true
             if player.move ~= nil then
                 if player.move.dy > 0 then
-                    player.y = robot.y-robot.h
+                    player.y = robot.y-robot.h-1
                     player.move.dy = -player.move.dy
                 elseif player.move.dx > 0 then
                     player.x = robot.x-robot.w/2-player.w/2
-                    player.move.dx = -player.move.dx*1.5
+                    player.move.dx = -player.move.dx*1.1
+                    player.move.dy = player.move.dy*1.2
                 else
                     player.x = robot.x+robot.w/2+player.w/2
-                    player.move.dx = -player.move.dx*1.5
+                    player.move.dx = -player.move.dx*1.1
+                    player.move.dy = player.move.dy*1.2
                 end
             end
         else
@@ -639,6 +674,66 @@ local function deletion()
     return playerDeleted
 end
 
+local function attack(entity,dt)
+    if entity.attack.attacking then
+        entity.attack.clock = entity.attack.clock + dt
+        if entity.attack.clock >= entity.attack.time then
+            entity.attack.attacking = false
+
+            -- continue moving again
+            entity.ai.move = true
+        end
+    end
+end
+
+
+local function updateAttackInterval(dt)
+    attackIntervalClock = attackIntervalClock + dt
+
+    if attackIntervalClock >= attackIntervalTime then
+        local entity = nil
+
+        -- collect robots that could attack
+        local army = {}
+        for i = 1, #list do
+            local e = list[i]
+            if e.attack ~= nil and not e.attack.attacking then
+                table.insert(army,e)
+            end
+        end
+
+        -- pick random attacker
+        if #army > 0 then
+            entity = army[math.random(1,#army)]
+        end
+
+        if entity ~= nil then
+            entity.attack.attacking = true
+            entity.attack.clock = 0
+
+            -- stop moving
+            entity.ai.move = false
+
+            -- set direction entity.ai.dir based on nearest kitten
+            -- ...
+
+            -- set graphics
+            if entity.draw ~= nil and entity.draw.attack ~= nil then
+                entity.draw.current = entity.draw.attack
+                entity.draw.frame = 1
+                entity.draw.clock = 0
+            end
+        end
+
+        attackIntervalTime = attackIntervalTime - ATTACK_INTERVAL_CHANGE
+        if attackIntervalTime < ATTACK_INTERVAL_MIN then
+            attackIntervalTime = ATTACK_INTERVAL_MIN
+        end
+
+        attackIntervalClock = math.random(0,ATTACK_INTERVAL_MARGIN)
+    end
+end
+
 -- returns whether game continues
 function entities.update(dt)
     for i = 1, #list do
@@ -663,6 +758,9 @@ function entities.update(dt)
             move(entity,dt)
             land(entity)
         end
+        if entity.attack ~= nil then
+            attack(entity,dt)
+        end
         if entity.die ~= nil then
             die(entity,dt)
         end
@@ -673,6 +771,8 @@ function entities.update(dt)
 
     collisions()
     local continue = not deletion()
+
+    updateAttackInterval(dt)
 
     -- reset input
     input = {
