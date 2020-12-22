@@ -9,7 +9,7 @@ local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
-local BACKGROUND_COLOR = utils.getColorFromRgb(0,0,0)
+local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83) --0,0,0)
 local FULL_SCREEN = false
 
 local STATE_TITLE = 1
@@ -20,9 +20,6 @@ local state
 local titleAngle = 0
 
 --[[ Todo:
-- robots can go bad
-- LATER: cats can walk
-- robots can break down and go evil
 - LATER: evil robots can hurt cats
 - LATER: spikes on floors can hurt player
 - player can repair robots by jumping over them

@@ -126,7 +126,7 @@ function entities.add(type,floor,floorXFraction)
         entity = {
             x = x,
             y = y,
-            w = 20,
+            w = 18,
             h = 24,
             action = {
                 left = false,
@@ -164,6 +164,17 @@ function entities.add(type,floor,floorXFraction)
                         images.get(images.IMAGE_ROBOT_WALK_RIGHT_1)
                     },
                     time = 0.2
+                },
+                attack = {
+                    left = {
+                        images.get(images.IMAGE_ROBOT_ATTACK_LEFT_1),
+                        images.get(images.IMAGE_ROBOT_ATTACK_LEFT_2)
+                    },
+                    right = {
+                        images.get(images.IMAGE_ROBOT_ATTACK_RIGHT_1),
+                        images.get(images.IMAGE_ROBOT_ATTACK_RIGHT_2)
+                    },
+                    time = 0.2
                 }
             },
             collide = {
@@ -172,7 +183,6 @@ function entities.add(type,floor,floorXFraction)
                 h = 24
             },
             button = {
-                hit = false,
                 h = 8
             },
             attack = {
@@ -571,11 +581,24 @@ local function collidePlayerRobot(player,robot)
     local playerHit = false
     if robot.button ~= nil then
         if player.y <= robot.y-robot.h+robot.button.h then
-            robot.button.hit = true
             if player.move ~= nil then
+                -- robot button is hit from above
                 if player.move.dy > 0 then
                     player.y = robot.y-robot.h-1
                     player.move.dy = -player.move.dy
+
+                    -- robot is attacking                
+                    if robot.attack ~= nil and robot.attack.attacking then
+                        robot.attack.attacking = false
+                        robot.ai.move = true
+
+                        -- set graphics
+                        if robot.draw ~= nil and robot.draw.landed ~= nil then
+                            robot.draw.current = robot.draw.landed
+                            robot.draw.frame = 1
+                            robot.draw.clock = 0
+                        end
+                    end
                 elseif player.move.dx > 0 then
                     player.x = robot.x-robot.w/2-player.w/2
                     player.move.dx = -player.move.dx*1.1
