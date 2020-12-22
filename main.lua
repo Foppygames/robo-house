@@ -31,6 +31,8 @@ local titleAngle = 0
 ]]
 
 function love.load()
+    math.randomseed(os.time())
+
     love.window.setTitle(GAME_TITLE)
 	love.graphics.setDefaultFilter("nearest","nearest")
 	love.graphics.setLineStyle("rough")
@@ -90,8 +92,7 @@ function love.keypressed(key)
         elseif key == "space" then
             switchToState(STATE_ACTION)
         end
-    end
-    if state == STATE_ACTION then
+    elseif state == STATE_ACTION then
         if key == "escape" then
             switchToState(STATE_TITLE)
         elseif key == "space" then
