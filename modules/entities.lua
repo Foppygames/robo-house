@@ -267,7 +267,7 @@ function entities.add(type,floor,floorXFraction)
                 attacked = false,
                 distance = nil,
                 dir = nil,
-                maxDx = 7,
+                maxDx = 6,
                 originalMaxDx = nil
             },
             collide = {
@@ -904,24 +904,62 @@ local function victim(entity,dt)
     end
 end
 
+local function getDistanceToNearestKitten(entity)
+    local distance = nil
+    local dir = nil
+    local floor = nil
+    if entity.move ~= nil then
+        floor = entity.move.floor
+    end
+    for i = 1, #list do
+        local e = list[i]
+        if e.victim ~= nil then
+            if e.move ~= nil and e.move.landed and e.move.floor == floor then
+                local d = math.abs(entity.x - e.x)
+                if distance == nil or d < distance then
+                    distance = d
+                    if e.x < entity.x then
+                        dir = "left"
+                    else
+                        dir = "right"
+                    end
+                end
+            end
+        end
+    end
+    return distance, dir
+end
+
 local function updateAttackInterval(dt)
     attackIntervalClock = attackIntervalClock + dt
 
     if attackIntervalClock >= attackIntervalTime then
-        local entity = nil
-
-        -- collect robots that could attack
+        -- collect indexes to robots that could attack
         local army = {}
         for i = 1, #list do
-            local e = list[i]
-            if e.ai ~= nil and e.attack ~= nil and not e.attack.attacking then
-                table.insert(army,e)
+            local entity = list[i]
+            if entity.ai ~= nil and entity.attack ~= nil and not entity.attack.attacking then
+                local distance, dir = getDistanceToNearestKitten(entity)
+                -- insert sorted from big to small distance
+                local index = 1
+                while index <= #army and (distance == nil or distance < army[index].distance) do
+                    index = index + 1
+                end
+                table.insert(army,index,{
+                    index = i,
+                    distance = distance,
+                    direction = dir
+                })
             end
         end
 
-        -- pick random attacker
+        -- pick random attacker from the 3 that are furthest away from a kitten
+        local data = nil
+        local entity = nil
         if #army > 0 then
-            entity = army[math.random(1,#army)]
+            local pickFrom = math.min(3,#army)
+            data = army[math.random(1,pickFrom)]
+            entity = list[data.index]
         end
 
         if entity ~= nil then
@@ -931,32 +969,9 @@ local function updateAttackInterval(dt)
             -- stop moving
             entity.ai.move = false
 
-            -- set direction entity.ai.dir based on nearest kitten
-            local distance = nil
-            local dir = nil
-            local floor = nil
-            if entity.move ~= nil then
-                floor = entity.move.floor
-            end
-            for i = 1, #list do
-                local e = list[i]
-                if e.victim ~= nil then
-                    if e.move ~= nil and e.move.landed and e.move.floor == floor then
-                        local d = math.abs(entity.x - e.x)
-                        if distance == nil or d < distance then
-                            distance = d
-                            if e.x < entity.x then
-                                dir = "left"
-                            else
-                                dir = "right"
-                            end
-                        end
-                    end
-                end
-            end
-            if dir ~= nil then
+            if data.direction ~= nil then
                 entity.attack.originalDir = entity.ai.dir
-                entity.ai.dir = dir
+                entity.ai.dir = data.direction
             end
 
             -- set graphics
