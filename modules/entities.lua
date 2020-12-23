@@ -19,6 +19,13 @@ local ATTACK_INTERVAL_MIN = 6
 local ATTACK_INTERVAL_MARGIN = 2
 local ATTACK_INTERVAL_CHANGE = 1
 local MINIMUM_ATTACK_DISTANCE = 35
+local LINE_MIN_LENGTH = 2
+local LINE_MAX_LENGTH = 10
+local LINE_MAX_OFFSET_Y = 7
+local LINE_SPEED = 140
+local LINE_TIME = 0.1
+local LINE_COLOR = utils.getColorFromRgb(255,163,0)
+local LINE_MAX_DISTANCE = 80
 
 local list = {}
 local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
@@ -269,7 +276,9 @@ function entities.add(type,floor,floorXFraction)
                 distance = nil,
                 dir = nil,
                 maxDx = 6,
-                originalMaxDx = nil
+                originalMaxDx = nil,
+                lines = {},
+                lineClock = 0
             },
             collide = {
                 type = entities.TYPE_KITTEN,
@@ -855,16 +864,16 @@ local function victim(entity,dt)
     -- already attacked
     if entity.victim.attacked then
         if attacked then
-            -- update direction
+            -- update direction and distance
             entity.victim.dir = dir
+            entity.victim.distance = distance
         else
             -- return to sitting
             entity.victim.attacked = false
-
+            entity.victim.lines = {}
             if entity.move ~= nil then
                 entity.move.maxDx = entity.victim.originalMaxDx
             end
-
             if entity.ai ~= nil then
                 if entity.victim.dir == "left" then
                     entity.ai.dir = "right"
@@ -889,6 +898,7 @@ local function victim(entity,dt)
         if attacked then
             entity.victim.attacked = true
             entity.victim.dir = dir
+            entity.victim.distance = distance
 
             if entity.move ~= nil then
                 entity.victim.originalMaxDx = entity.move.maxDx
@@ -900,6 +910,38 @@ local function victim(entity,dt)
                 entity.draw.current = entity.draw.attacked
                 entity.draw.frame = 1
                 entity.draw.clock = 0
+            end
+        end
+    end
+
+    if entity.victim.attacked then
+        entity.victim.lineClock = entity.victim.lineClock + dt
+        if entity.victim.lineClock >= LINE_TIME then
+            local dx = 1
+            if entity.victim.dir == "left" then
+                dx = -1
+            end
+            table.insert(entity.victim.lines,{
+                x = entity.x + dx * entity.w/2,
+                y = entity.y - math.random(0,LINE_MAX_OFFSET_Y),
+                dx = dx,
+                targetX = entity.x + dx * (math.min(entity.victim.distance*0.8,LINE_MAX_DISTANCE)),
+                length = math.random(LINE_MIN_LENGTH,LINE_MAX_LENGTH)
+            })
+            entity.victim.lineClock = 0
+        end
+
+        for i = #entity.victim.lines, 1, -1 do
+            local line = entity.victim.lines[i]
+            line.x = line.x + line.dx * dt * LINE_SPEED
+            if line.dx < 0 then
+                if line.x <= line.targetX then
+                    table.remove(entity.victim.lines,i)
+                end
+            else
+                if line.x >= line.targetX then
+                    table.remove(entity.victim.lines,i)
+                end
             end
         end
     end
@@ -1061,6 +1103,14 @@ function entities.draw()
                     y = y + math.random(-1,1)
                 end
                 love.graphics.draw(sprite.image,x,y)
+            end
+            if entity.victim ~= nil and entity.victim.attacked then
+                love.graphics.setColor(LINE_COLOR)
+                for i = 1, #entity.victim.lines do
+                    local line = entity.victim.lines[i]
+                    love.graphics.line(line.x-line.length/2,line.y,line.x+line.length/2,line.y)
+                end
+                love.graphics.setColor(1,1,1)
             end
         end
     end

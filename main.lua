@@ -9,7 +9,7 @@ local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 
 local GAME_TITLE = "Robo House"
-local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83) --0,0,0)
+local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
 local FULL_SCREEN = false
 
 local STATE_TITLE = 1
@@ -20,14 +20,13 @@ local state
 local titleAngle = 0
 
 --[[ Todo:
-- LATER: evil robots can hurt cats
-- LATER: spikes on floors can hurt player
-- player can repair robots by jumping over them
-- keep track of time of day
-- reaching end of day means next level
+- score
+- hi-score
+- coins for extra points
 - sound
 - music
-- gamepad controls
+- LATER: spikes on floors can hurt player
+- LATER: gamepad controls
 ]]
 
 function love.load()
