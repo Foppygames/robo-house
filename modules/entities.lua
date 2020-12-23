@@ -120,7 +120,8 @@ function entities.add(type,floor,floorXFraction)
                 time = 3
             },
             delete = {
-                delete = false
+                delete = false,
+                alsoDeletePlayer = false
             }
         }
     elseif type == entities.TYPE_ROBOT then
@@ -251,18 +252,39 @@ function entities.add(type,floor,floorXFraction)
                         images.get(images.IMAGE_KITTEN_SIT_RIGHT)
                     },
                     time = 0.2
+                },
+                attacked = {
+                    left = {
+                        images.get(images.IMAGE_KITTEN_ATTACKED_LEFT)
+                    },
+                    right = {
+                        images.get(images.IMAGE_KITTEN_ATTACKED_RIGHT)
+                    },
+                    time = 0.2
                 }
             },
             victim = {
                 attacked = false,
                 distance = nil,
-                dir = nil
-            }
-            --[[collide = {
+                dir = nil,
+                maxDx = 7,
+                originalMaxDx = nil
+            },
+            collide = {
                 type = entities.TYPE_KITTEN,
                 w = 10,
                 h = 9
-            },]]--
+            },
+            die = {
+                dying = false,
+                draw = "explosion",
+                clock = 0,
+                time = 3
+            },
+            delete = {
+                delete = false,
+                alsoDeletePlayer = true
+            }
         }
     end
 
@@ -319,6 +341,11 @@ local function ai(entity,dt)
                 entity.ai.dir = "left"
             end
         end
+    elseif entity.victim ~= nil and entity.victim.attacked then
+        if entity.ai.dir ~= entity.victim.dir then
+            entity.ai.dir = entity.victim.dir
+        end
+        entity.ai.move = true
     elseif entity.ai.clock ~= nil then
         entity.ai.clock = entity.ai.clock + dt
         if entity.ai.clock >= entity.ai.time then
@@ -552,6 +579,14 @@ local function die(entity,dt)
         if entity.die.clock >= entity.die.time then
             if entity.delete ~= nil then
                 entity.delete.delete = true
+                if entity.delete.alsoDeletePlayer then
+                    for i = 1, #list do
+                        local e = list[i]
+                        if e.ai == nil and e.delete ~= nil then
+                            e.delete.delete = true
+                        end
+                    end
+                end
             end
         end
     end    
@@ -660,14 +695,57 @@ local function collidePlayerRobot(player,robot)
     end
 end
 
+local function collideKittenRobot(kitten,robot)
+    -- robot is not attacking
+    if robot.attack == nil or not robot.attack.attacking then
+        return
+    end
+    local diffX = math.abs(robot.x-kitten.x)
+    if diffX > (kitten.collide.w/2+robot.collide.w/2) then
+        return
+    end
+    if kitten.y > robot.y+kitten.collide.h then
+        return
+    end
+    if kitten.y < robot.y-robot.collide.h then
+        return
+    end
+    if kitten.die ~= nil then
+        kitten.die.dying = true
+
+        -- remove entity components
+        for i = 1, #list do
+            local entity = list[i]
+            entity.move = nil
+            entity.collide = nil
+            entity.jump = nil
+            entity.fall = nil
+            entity.climb = nil
+        end
+
+        --[[if player.draw[player.die.draw] ~= nil then
+            player.draw.current = player.draw[player.die.draw]
+            player.draw.dir = "both"
+            player.draw.newDir = "both"
+            player.draw.frame = 1
+        end]]--
+    end
+end
+
 local function collide(entity,other)
-    if entity.collide.type == entities.TYPE_PLAYER then
+    if entity.collide.type == entities.TYPE_KITTEN then
+        if other.collide.type == entities.TYPE_ROBOT then
+            collideKittenRobot(entity,other)
+        end
+    elseif entity.collide.type == entities.TYPE_PLAYER then
         if other.collide.type == entities.TYPE_ROBOT then
             collidePlayerRobot(entity,other)
         end
-    elseif other.collide.type == entities.TYPE_PLAYER then
-        if entity.collide.type == entities.TYPE_ROBOT then
+    elseif entity.collide.type == entities.TYPE_ROBOT then
+        if other.collide.type == entities.TYPE_PLAYER then
             collidePlayerRobot(other,entity)
+        elseif other.collide.type == entities.TYPE_KITTEN then
+            collideKittenRobot(other,entity)
         end
     end
 end
@@ -737,11 +815,12 @@ end
 local function victim(entity,dt)
     local attacked = false
     local distance = nil
+    local dir = nil
 
     -- look for attackers on same floor
     local floor = nil
     if entity.move ~= nil then
-        floor = entity.floor
+        floor = entity.move.floor
     end
     for i = 1, #list do
         local e = list[i]
@@ -772,17 +851,55 @@ local function victim(entity,dt)
         end
     end
 
+    -- already attacked
     if entity.victim.attacked then
         if attacked then
             -- update direction
             entity.victim.dir = dir
         else
+            -- return to sitting
             entity.victim.attacked = false
+
+            if entity.move ~= nil then
+                entity.move.maxDx = entity.victim.originalMaxDx
+            end
+
+            if entity.ai ~= nil then
+                if entity.victim.dir == "left" then
+                    entity.ai.dir = "right"
+                else
+                    entity.ai.dir = "left"
+                end
+                entity.ai.move = false
+            end
+
+            -- set graphics
+            if entity.draw ~= nil and entity.draw.sit ~= nil then
+                entity.draw.current = entity.draw.sit
+                if entity.ai ~= nil then
+                    entity.draw.newDir = entity.ai.dir
+                end
+                entity.draw.frame = 1
+                entity.draw.clock = 0
+            end
         end
+    -- not under attack
     else
         if attacked then
             entity.victim.attacked = true
             entity.victim.dir = dir
+
+            if entity.move ~= nil then
+                entity.victim.originalMaxDx = entity.move.maxDx
+                entity.move.maxDx = entity.victim.maxDx
+            end
+
+            -- set graphics
+            if entity.draw ~= nil and entity.draw.attacked ~= nil then
+                entity.draw.current = entity.draw.attacked
+                entity.draw.frame = 1
+                entity.draw.clock = 0
+            end
         end
     end
 end
