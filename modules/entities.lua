@@ -14,10 +14,11 @@ entities.TYPE_ROBOT = 2
 entities.TYPE_KITTEN = 3
 
 local ATTACK_TIME = 20
-local ATTACK_INTERVAL_MAX = 15
-local ATTACK_INTERVAL_MIN = 5
-local ATTACK_INTERVAL_MARGIN = 3
+local ATTACK_INTERVAL_MAX = 12
+local ATTACK_INTERVAL_MIN = 6
+local ATTACK_INTERVAL_MARGIN = 2
 local ATTACK_INTERVAL_CHANGE = 1
+local MINIMUM_ATTACK_DISTANCE = 35
 
 local list = {}
 local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
@@ -59,7 +60,7 @@ function entities.add(type,floor,floorXFraction)
                 floor = floor
             },
             jump = {
-                power = 150
+                power = 140
             },
             fall = {
                 gravity = 5
@@ -69,7 +70,7 @@ function entities.add(type,floor,floorXFraction)
                 floor = nil,
                 maxDx = 90,
                 accX = 1000, 
-                maxDy = 90,
+                maxDy = 80,
                 accY = 1000
             },
             draw = {
@@ -272,7 +273,7 @@ function entities.add(type,floor,floorXFraction)
             },
             collide = {
                 type = entities.TYPE_KITTEN,
-                w = 10,
+                w = 2,
                 h = 9
             },
             die = {
@@ -940,16 +941,19 @@ local function updateAttackInterval(dt)
             local entity = list[i]
             if entity.ai ~= nil and entity.attack ~= nil and not entity.attack.attacking then
                 local distance, dir = getDistanceToNearestKitten(entity)
-                -- insert sorted from big to small distance
-                local index = 1
-                while index <= #army and (distance == nil or distance < army[index].distance) do
-                    index = index + 1
+                -- robot is not too close
+                if distance ~= nil and distance >= MINIMUM_ATTACK_DISTANCE then
+                    -- insert sorted from big to small distance
+                    local index = 1
+                    while index <= #army and distance < army[index].distance do
+                        index = index + 1
+                    end
+                    table.insert(army,index,{
+                        index = i,
+                        distance = distance,
+                        direction = dir
+                    })
                 end
-                table.insert(army,index,{
-                    index = i,
-                    distance = distance,
-                    direction = dir
-                })
             end
         end
 
