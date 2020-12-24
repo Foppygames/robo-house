@@ -3,7 +3,6 @@
 
 local images = {}
 
---images.IMAGE_LIFE_ICON = "life_icon"
 images.IMAGE_KITTEN_ATTACKED_LEFT = "kitten_attacked_left"
 images.IMAGE_KITTEN_ATTACKED_RIGHT = "kitten_attacked_right"
 images.IMAGE_KITTEN_SIT_LEFT = "kitten_sit_left"
@@ -31,7 +30,6 @@ images.IMAGE_ROBOT_WALK_RIGHT_1 = "robot_walk_right_1"
 local list = {}
 
 function images.init() 
-    --list[images.IMAGE_LIFE_ICON] = {image = love.graphics.newImage("images/life_icon.png")}
     list[images.IMAGE_KITTEN_ATTACKED_LEFT] = {image = love.graphics.newImage("images/kitten_attacked_left.png")}
     list[images.IMAGE_KITTEN_ATTACKED_RIGHT] = {image = love.graphics.newImage("images/kitten_attacked_right.png")}
     list[images.IMAGE_KITTEN_SIT_LEFT] = {image = love.graphics.newImage("images/kitten_sit_left.png")}

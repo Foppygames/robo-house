@@ -7,10 +7,11 @@ local floors = require("modules.floors")
 local images = require("modules.images")
 local ladders = require("modules.ladders")
 local utils = require("modules.utils")
+local score = require("modules.score")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
-local FULL_SCREEN = false
+local FULL_SCREEN = true --false
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
@@ -47,6 +48,7 @@ end
 function switchToState(new)
     if state == STATE_ACTION then
         entities.reset()
+        score.reset()
     end
     state = new
     if state == STATE_TITLE then
@@ -100,13 +102,6 @@ function love.keypressed(key)
     end
 end
 
---[[function drawOnScreenInfo()
-    love.graphics.setColor(1,1,1)
-    for i = 1, lives do
-        love.graphics.draw(images.get(images.IMAGE_LIFE_ICON).image,20+(i-1)*20,aspect.GAME_HEIGHT-14)
-    end
-end]]--
-
 function drawTitleScreen()
     love.graphics.push()
     love.graphics.scale(2,2)
@@ -116,7 +111,7 @@ function drawTitleScreen()
         if angle >= 360 then
             angle = angle - 360
         end
-        love.graphics.print(string.sub(GAME_TITLE,i,i),30 + i * 10 - math.cos(math.rad(angle)*5),6-math.sin(math.rad(angle)*20))
+        love.graphics.print(string.sub(GAME_TITLE,i,i),30 + i * 10 - math.cos(math.rad(angle)*5),10-math.sin(math.rad(angle)*20))
 	end
     love.graphics.pop()
     love.graphics.setColor(utils.getColorFromRgb(255,236,39))
@@ -140,10 +135,11 @@ function love.draw()
 
     if state == STATE_TITLE then
         drawTitleScreen()
+        score.draw()
     end
 
     if state == STATE_ACTION then
-        --drawOnScreenInfo()
+        score.draw()
         floors.draw()
         ladders.draw()
         entities.draw()

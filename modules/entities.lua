@@ -7,6 +7,7 @@ local aspect = require("modules.aspect")
 local floors = require("modules.floors")
 local images = require("modules.images")
 local ladders = require("modules.ladders")
+local score = require("modules.score")
 local utils = require("modules.utils")
 
 entities.TYPE_PLAYER = 1
@@ -22,10 +23,11 @@ local MINIMUM_ATTACK_DISTANCE = 35
 local LINE_MIN_LENGTH = 2
 local LINE_MAX_LENGTH = 10
 local LINE_MAX_OFFSET_Y = 7
-local LINE_SPEED = 140
+local LINE_SPEED = 160
 local LINE_TIME = 0.1
 local LINE_COLOR = utils.getColorFromRgb(255,163,0)
 local LINE_MAX_DISTANCE = 80
+local MAX_BUTTON_BOUNCE_DY = 100
 
 local list = {}
 local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
@@ -77,7 +79,7 @@ function entities.add(type,floor,floorXFraction)
                 floor = nil,
                 maxDx = 90,
                 accX = 1000, 
-                maxDy = 80,
+                maxDy = 95,
                 accY = 1000
             },
             draw = {
@@ -191,10 +193,10 @@ function entities.add(type,floor,floorXFraction)
             collide = {
                 type = entities.TYPE_ROBOT,
                 w = 18,
-                h = 24
+                h = 20
             },
             button = {
-                h = 8
+                h = 12
             },
             attack = {
                 attacking = false,
@@ -639,7 +641,7 @@ local function collidePlayerRobot(player,robot)
                 -- robot button is hit from above
                 if player.move.dy > 0 then
                     player.y = robot.y-robot.h-1
-                    player.move.dy = -player.move.dy
+                    player.move.dy = -(math.min(player.move.dy,MAX_BUTTON_BOUNCE_DY))
 
                     -- robot is attacking                
                     if robot.attack ~= nil and robot.attack.attacking then
@@ -658,6 +660,9 @@ local function collidePlayerRobot(player,robot)
                             robot.draw.frame = 1
                             robot.draw.clock = 0
                         end
+
+                        -- score points
+                        score.add(score.POINTS_FOR_BUTTON)
                     end
                 elseif player.move.dx > 0 then
                     player.x = robot.x-robot.w/2-player.w/2
