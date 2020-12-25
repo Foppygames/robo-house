@@ -11,7 +11,7 @@ local score = require("modules.score")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
-local FULL_SCREEN = true --false
+local FULL_SCREEN = false
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
@@ -48,12 +48,13 @@ end
 function switchToState(new)
     if state == STATE_ACTION then
         entities.reset()
-        score.reset()
     end
     state = new
     if state == STATE_TITLE then
         titleAngle = 0
     elseif state == STATE_ACTION then
+        score.reset()
+        
         entities.add(entities.TYPE_PLAYER,2,0.2)
 
         entities.add(entities.TYPE_ROBOT,3,0.3)
