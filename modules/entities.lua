@@ -8,6 +8,7 @@ local floors = require("modules.floors")
 local images = require("modules.images")
 local ladders = require("modules.ladders")
 local score = require("modules.score")
+local sound = require("modules.sound")
 local utils = require("modules.utils")
 
 entities.TYPE_PLAYER = 1
@@ -28,6 +29,7 @@ local LINE_TIME = 0.1
 local LINE_COLOR = utils.getColorFromRgb(255,163,0)
 local LINE_MAX_DISTANCE = 80
 local MAX_BUTTON_BOUNCE_DY = 100
+local CLIMB_SOUND_TIME = 0.16
 
 local list = {}
 local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
@@ -80,7 +82,8 @@ function entities.add(type,floor,floorXFraction)
                 maxDx = 90,
                 accX = 1000, 
                 maxDy = 95,
-                accY = 1000
+                accY = 1000,
+                soundClock = 0
             },
             draw = {
                 dir = "right",
@@ -127,7 +130,7 @@ function entities.add(type,floor,floorXFraction)
                 dying = false,
                 draw = "explosion",
                 clock = 0,
-                time = 3
+                time = 2
             },
             delete = {
                 delete = false,
@@ -502,6 +505,9 @@ local function jump(entity)
                     entity.draw.clock = 0
                 end
             end
+
+            -- play sound
+            sound.play(sound.SOUND_JUMP)
         end
     end
 end
@@ -556,12 +562,22 @@ local function land(entity)
     end
 end
 
-local function climb(entity)
+local function climb(entity,dt)
     -- entity is climbing
     if entity.climb.climbing then
         local floor, grab = ladders.grab(entity.x,entity.y,entity.w,entity.h)
         entity.climb.climbing = grab
         entity.climb.floor = floor
+
+        if entity.move ~= nil and entity.move.dy ~= 0 then
+            entity.climb.soundClock = entity.climb.soundClock + dt
+            if entity.climb.soundClock >= CLIMB_SOUND_TIME then
+                local fromMid = (entity.y - aspect.GAME_HEIGHT/2) / (aspect.GAME_HEIGHT/2)
+                local pitch = 2 - fromMid
+                sound.play(sound.SOUND_CLIMB,pitch)
+                entity.climb.soundClock = entity.climb.soundClock - CLIMB_SOUND_TIME
+            end
+        end
     -- entity is not climbing
     else
         if getAction(entity,"up") or getAction(entity,"down") then
@@ -570,6 +586,7 @@ local function climb(entity)
                 entity.move.dy = 0
                 entity.climb.climbing = true
                 entity.climb.floor = floor
+                entity.climb.soundClock = CLIMB_SOUND_TIME
                 entity.move.landed = false
 
                 -- switch to animation used for climbing
@@ -663,6 +680,12 @@ local function collidePlayerRobot(player,robot)
 
                         -- score points
                         score.add(score.POINTS_FOR_BUTTON)
+
+                        -- play sound
+                        sound.play(sound.SOUND_BUTTON_SUCCESS)
+                    else
+                        -- play sound
+                        sound.play(sound.SOUND_BUTTON_NEUTRAL)
                     end
                 elseif player.move.dx > 0 then
                     player.x = robot.x-robot.w/2-player.w/2
@@ -706,6 +729,10 @@ local function collidePlayerRobot(player,robot)
                 player.draw.newDir = "both"
                 player.draw.frame = 1
             end
+
+            -- play sounds
+            sound.play(sound.SOUND_PLAYER_HURT)
+            sound.play(sound.SOUND_PLAYER_HIT)
         end
     end
 end
@@ -737,6 +764,9 @@ local function collideKittenRobot(kitten,robot)
             entity.fall = nil
             entity.climb = nil
         end
+
+        -- play sound
+        sound.play(sound.SOUND_KITTEN_HURT)
 
         --[[if player.draw[player.die.draw] ~= nil then
             player.draw.current = player.draw[player.die.draw]
@@ -1032,6 +1062,9 @@ local function updateAttackInterval(dt)
                 entity.draw.frame = 1
                 entity.draw.clock = 0
             end
+
+            -- play sound
+            sound.play(sound.SOUND_ROBOT_ATTACK)
         end
 
         attackIntervalTime = attackIntervalTime - ATTACK_INTERVAL_CHANGE
@@ -1061,7 +1094,7 @@ function entities.update(dt)
             fall(entity,dt)
         end
         if entity.climb ~= nil then
-            climb(entity)
+            climb(entity,dt)
         end
         if entity.move ~= nil then
             move(entity,dt)

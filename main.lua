@@ -8,6 +8,7 @@ local images = require("modules.images")
 local ladders = require("modules.ladders")
 local utils = require("modules.utils")
 local score = require("modules.score")
+local sound = require("modules.sound")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
@@ -39,10 +40,11 @@ function love.load()
 	love.graphics.setLineStyle("rough")
     love.graphics.setFont(love.graphics.newFont("Retroville_NC.ttf",10))
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)
-
+    
     aspect.init(FULL_SCREEN)
     images.init()
     ladders.init()
+    sound.init()
     switchToState(STATE_TITLE)
 end
 
