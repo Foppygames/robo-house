@@ -21,8 +21,6 @@ local state
 local titleAngle = 0
 
 --[[ Todo:
-- score
-- hi-score
 - coins for extra points
 - sound
 - music
