@@ -13,23 +13,21 @@ local sound = require("modules.sound")
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
 local FULL_SCREEN = false
-local MUSIC_VOLUME_TITLE = 0.5
-local MUSIC_VOLUME_ACTION = 0.2
+local MUSIC_VOLUME_TITLE = 0.1
+local MUSIC_VOLUME_ACTION = 0.05
+local MUSIC_PATH = "/music/POL-chubby-cat-long.wav"
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
 
 local state
 local titleAngle = 0
-local music = nil --love.audio.newSource("...","static")
-local musicEnabled = false
+local music = nil
+local musicEnabled = true
 
 --[[ Todo:
 - coins for extra points
-- sound
-- music
-- LATER: spikes on floors can hurt player
-- LATER: gamepad controls
+- gamepad controls
 ]]
 
 function love.load()
@@ -41,6 +39,15 @@ function love.load()
     love.graphics.setFont(love.graphics.newFont("Retroville_NC.ttf",10))
     love.graphics.setBackgroundColor(BACKGROUND_COLOR)
     
+    -- check if music file exist
+    local info = love.filesystem.getInfo(MUSIC_PATH)
+    if info ~= nil then
+        music = love.audio.newSource(MUSIC_PATH,"static")
+        music:setLooping(true)
+    else
+        musicEnabled = false
+    end
+
     aspect.init(FULL_SCREEN)
     images.init()
     ladders.init()
@@ -116,10 +123,11 @@ function love.keypressed(key)
     if key == "m" then
         if musicEnabled then
             love.audio.stop(music)
-        else
+            musicEnabled = false
+        elseif music ~= nil then
             love.audio.play(music)
+            musicEnabled = true
         end
-        musicEnabled = not musicEnabled
     end
 end
 
@@ -139,13 +147,20 @@ function drawTitleScreen()
     love.graphics.printf("For the #Redefine2021 gamejam!",0,60,aspect.GAME_WIDTH,"center")	
     
     love.graphics.setColor(utils.getColorFromRgb(41,173,255))
-    love.graphics.printf("Controls: arrow keys and space",0,90,aspect.GAME_WIDTH,"center")	
-    love.graphics.printf("PRESS SPACE TO START",0,110,aspect.GAME_WIDTH,"center")	
+    love.graphics.printf("Controls: arrow keys and space",0,80,aspect.GAME_WIDTH,"center")	
+    love.graphics.printf("PRESS SPACE TO START",0,100,aspect.GAME_WIDTH,"center")	
     love.graphics.setColor(utils.getColorFromRgb(131,118,156))
-    love.graphics.printf("Press Esc to quit",0,130,aspect.GAME_WIDTH,"center")	
+    love.graphics.printf("ESC to quit / M to toggle music",0,120,aspect.GAME_WIDTH,"center")	
 
     love.graphics.setColor(utils.getColorFromRgb(255,241,232))
-    love.graphics.printf("Code & gfx by Robbert Prins",0,aspect.GAME_HEIGHT-40,aspect.GAME_WIDTH,"center")	
+    local writtenByY = aspect.GAME_HEIGHT-60
+    if music == nil then
+        writtenByY = aspect.GAME_HEIGHT-40
+    end
+    love.graphics.printf("Written by Robbert Prins",0,writtenByY,aspect.GAME_WIDTH,"center")	
+    if music ~= nil then
+        love.graphics.printf("Music from PlayOnLoop.com",0,aspect.GAME_HEIGHT-40,aspect.GAME_WIDTH,"center")	
+    end
     love.graphics.setColor(utils.getColorFromRgb(255,236,39))
     love.graphics.printf("Foppygames 2020",0,aspect.GAME_HEIGHT-20,aspect.GAME_WIDTH,"center")	
 end
