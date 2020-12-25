@@ -12,13 +12,16 @@ local score = require("modules.score")
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
 local FULL_SCREEN = false
+local MUSIC_VOLUME_TITLE = 0.5
+local MUSIC_VOLUME_ACTION = 0.2
 
 local STATE_TITLE = 1
 local STATE_ACTION = 2
-local STATE_GAME_OVER = 3
 
 local state
 local titleAngle = 0
+local music = nil --love.audio.newSource("...","static")
+local musicEnabled = false
 
 --[[ Todo:
 - coins for extra points
@@ -50,7 +53,16 @@ function switchToState(new)
     state = new
     if state == STATE_TITLE then
         titleAngle = 0
+
+        if musicEnabled then
+            music:setVolume(MUSIC_VOLUME_TITLE)
+            love.audio.play(music)
+        end
     elseif state == STATE_ACTION then
+        if musicEnabled then
+            music:setVolume(MUSIC_VOLUME_ACTION)
+        end
+
         score.reset()
         
         entities.add(entities.TYPE_PLAYER,2,0.2)
@@ -98,6 +110,14 @@ function love.keypressed(key)
         elseif key == "space" then
             entities.setInput("jump")
         end
+    end
+    if key == "m" then
+        if musicEnabled then
+            love.audio.stop(music)
+        else
+            love.audio.play(music)
+        end
+        musicEnabled = not musicEnabled
     end
 end
 
