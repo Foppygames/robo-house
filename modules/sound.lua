@@ -11,6 +11,7 @@ sound.SOUND_PLAYER_HIT = 5
 sound.SOUND_PLAYER_HURT = 6
 sound.SOUND_KITTEN_HURT = 7
 sound.SOUND_ROBOT_ATTACK = 8
+sound.SOUND_COIN = 9
 
 local VOLUME = 0.1
 
@@ -25,6 +26,7 @@ function sound.init()
     sources[sound.SOUND_PLAYER_HURT] = love.audio.newSource("/sound/player_hurt.wav","static")
     sources[sound.SOUND_KITTEN_HURT] = love.audio.newSource("/sound/kitten_hurt.wav","static")
     sources[sound.SOUND_ROBOT_ATTACK] = love.audio.newSource("/sound/robot_attack.wav","static")
+    sources[sound.SOUND_COIN] = love.audio.newSource("/sound/coin.wav","static")
     for i = 1, #sources do
         sources[i]:setVolume(VOLUME)
     end

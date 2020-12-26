@@ -14,6 +14,7 @@ local utils = require("modules.utils")
 entities.TYPE_PLAYER = 1
 entities.TYPE_ROBOT = 2
 entities.TYPE_KITTEN = 3
+entities.TYPE_COIN = 4
 
 local ATTACK_TIME = 20
 local ATTACK_INTERVAL_MAX = 12
@@ -30,10 +31,17 @@ local LINE_COLOR = utils.getColorFromRgb(255,163,0)
 local LINE_MAX_DISTANCE = 80
 local MAX_BUTTON_BOUNCE_DY = 100
 local CLIMB_SOUND_TIME = 0.16
+local COIN_FLOAT_HEIGHT = 40
+local COIN_POSITIONS = {
+    {1,0.2},{1,0.5},{1,0.2},
+    {2,0.2},{2,0.5},{2,0.2},
+    {3,0.5}
+}
 
 local list = {}
 local attackIntervalClock = ATTACK_INTERVAL_MAX - ATTACK_INTERVAL_MARGIN
 local attackIntervalTime = ATTACK_INTERVAL_MAX
+local lastCoinPosition = 5
 
 local input = {
     jump = false,
@@ -128,6 +136,7 @@ function entities.add(type,floor,floorXFraction)
             },
             die = {
                 dying = false,
+                shake = true,
                 draw = "explosion",
                 clock = 0,
                 time = 2
@@ -292,13 +301,52 @@ function entities.add(type,floor,floorXFraction)
             },
             die = {
                 dying = false,
-                draw = "explosion",
+                shake = true,
+                draw = nil,
                 clock = 0,
                 time = 3
             },
             delete = {
                 delete = false,
                 alsoDeletePlayer = true
+            }
+        }
+    elseif type == entities.TYPE_COIN then
+        entity = {
+            x = x,
+            y = y - COIN_FLOAT_HEIGHT,
+            w = 8,
+            h = 7,
+            ai = {},
+            draw = {
+                dir = "both",
+                newDir = "both",
+                current = nil,
+                frame = 1,
+                clock = 0,
+                default = "coin",
+                coin = {
+                    both = {
+                        images.get(images.IMAGE_COIN_1)
+                    },
+                    time = 0.2
+                }
+            },
+            collide = {
+                type = entities.TYPE_COIN,
+                w = 8,
+                h = 7
+            },
+            die = {
+                dying = false,
+                shake = false,
+                draw = nil,
+                clock = 0,
+                time = 0
+            },
+            delete = {
+                delete = false,
+                alsoDeletePlayer = false
             }
         }
     end
@@ -737,6 +785,41 @@ local function collidePlayerRobot(player,robot)
     end
 end
 
+local function collidePlayerCoin(player,coin)
+    local diffX = math.abs(coin.x-player.x)
+    if diffX > (player.collide.w/2+coin.collide.w/2) then
+        return
+    end
+    if player.y > coin.y+player.collide.h then
+        return
+    end
+    if player.y < coin.y-coin.collide.h then
+        return
+    end
+    
+    -- score points
+    score.add(score.POINTS_FOR_COIN)
+
+    -- play sound
+    sound.play(sound.SOUND_COIN)
+
+    -- remove coin components
+    coin.collide = nil
+
+    -- delete coin
+    if coin.die ~= nil then
+        coin.die.dying = true
+    end
+
+    -- create new coin
+    local next = lastCoinPosition + math.random(1,1+#COIN_POSITIONS-1)
+    if next > #COIN_POSITIONS then
+        next = next - #COIN_POSITIONS
+    end
+    entities.add(entities.TYPE_COIN,COIN_POSITIONS[next][1],COIN_POSITIONS[next][2])
+    lastCoinPosition = next
+end
+
 local function collideKittenRobot(kitten,robot)
     -- robot is not attacking
     if robot.attack == nil or not robot.attack.attacking then
@@ -785,12 +868,18 @@ local function collide(entity,other)
     elseif entity.collide.type == entities.TYPE_PLAYER then
         if other.collide.type == entities.TYPE_ROBOT then
             collidePlayerRobot(entity,other)
+        elseif other.collide.type == entities.TYPE_COIN then
+            collidePlayerCoin(entity,other)
         end
     elseif entity.collide.type == entities.TYPE_ROBOT then
         if other.collide.type == entities.TYPE_PLAYER then
             collidePlayerRobot(other,entity)
         elseif other.collide.type == entities.TYPE_KITTEN then
             collideKittenRobot(other,entity)
+        end
+    elseif entity.collide.type == entities.TYPE_COIN then
+        if other.collide.type == entities.TYPE_PLAYER then
+            collidePlayerCoin(other,entity)
         end
     end
 end
@@ -1136,7 +1225,7 @@ function entities.draw()
                 local sprite = entity.draw.current[entity.draw.dir][entity.draw.frame]
                 local x = entity.x-sprite.w/2
                 local y = entity.y-sprite.h
-                if entity.die ~= nil and entity.die.dying then
+                if entity.die ~= nil and entity.die.dying and entity.die.shake then
                     x = x + math.random(-1,1)
                     y = y + math.random(-1,1)
                 end

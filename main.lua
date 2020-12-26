@@ -12,7 +12,7 @@ local sound = require("modules.sound")
 
 local GAME_TITLE = "Robo House"
 local BACKGROUND_COLOR = utils.getColorFromRgb(126,37,83)
-local FULL_SCREEN = false
+local FULL_SCREEN = true
 local MUSIC_VOLUME_TITLE = 0.1
 local MUSIC_VOLUME_ACTION = 0.05
 local MUSIC_PATH = "/music/POL-chubby-cat-long.wav"
@@ -24,11 +24,6 @@ local state
 local titleAngle = 0
 local music = nil
 local musicEnabled = true
-
---[[ Todo:
-- coins for extra points
-- gamepad controls
-]]
 
 function love.load()
     math.randomseed(os.time())
@@ -89,6 +84,8 @@ function switchToState(new)
         entities.add(entities.TYPE_KITTEN,2,0.9)
         entities.add(entities.TYPE_KITTEN,1,0.1)
         entities.add(entities.TYPE_KITTEN,1,0.9)
+
+        entities.add(entities.TYPE_COIN,2,0.5)
     end
 end
 

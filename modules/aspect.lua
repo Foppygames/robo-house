@@ -9,10 +9,6 @@ local utils = require("modules.utils")
 --aspect.WINDOW_WIDTH = 712
 --aspect.WINDOW_HEIGHT = 400
 
--- screenshots
---aspect.WINDOW_WIDTH = 356
---aspect.WINDOW_HEIGHT = 200
-
 -- final
 aspect.WINDOW_WIDTH = 1065
 aspect.WINDOW_HEIGHT = 600
